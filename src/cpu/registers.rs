@@ -71,10 +71,11 @@ impl Registers
     }
 
     // The F bit in the register
-    // Bit 7: "zero"
-    // Bit 6: "subtraction"
-    // Bit 5: "half carry"
-    // Bit 4: "carry"
+    //Bit   Name    Explanation
+    //7     z       Zero flag
+    //6     n       Subtraction flag (BCD)
+    //5     h       Half Carry flag (BCD)
+    //4     c       Carry flag
 
     // Register pairs that are needed : af, bc, de, hl.
     // Improvment : Macro?

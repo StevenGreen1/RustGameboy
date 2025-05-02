@@ -8,6 +8,11 @@ enum Instruction
     SUB(ArithmeticTarget),
     SBC(ArithmeticTarget),
     AND(ArithmeticTarget),
+    OR(ArithmeticTarget),
+    XOR(ArithmeticTarget),
+    CP(ArithmeticTarget),
+    INC(ArithmeticTarget),
+    DEC(ArithmeticTarget),
 }
 
 enum ArithmeticTarget
@@ -41,100 +46,83 @@ impl CPU
         }
     }
 
+    fn get_arithmetic_target_mut(&mut self, target: ArithmeticTarget) -> Option<&mut u8>
+    {
+        match target
+        {
+            ArithmeticTarget::B => Some(&mut self.registers.b),
+            ArithmeticTarget::C => Some(&mut self.registers.c),
+            ArithmeticTarget::D => Some(&mut self.registers.d),
+            ArithmeticTarget::E => Some(&mut self.registers.e),
+            ArithmeticTarget::H => Some(&mut self.registers.h),
+            ArithmeticTarget::L => Some(&mut self.registers.l),
+            _ => None,
+        }
+    }
+
+    fn get_arithmetic_target_value16(&self, target: ArithmeticTarget16) -> Option<u16>
+    {
+        match target
+        {
+            ArithmeticTarget16::BC => Some(self.registers.get_bc()),
+            ArithmeticTarget16::DE => Some(self.registers.get_de()),
+            ArithmeticTarget16::HL => Some(self.registers.get_hl())
+        }
+    }
+
     fn execute(&mut self, instruction: Instruction)
     {
         match instruction
         {
             Instruction::ADD(target) =>
             {
-                match target
+                if let Some(value) = self.get_arithmetic_target_value(target)
                 {
-                    ArithmeticTarget::B =>
-                    {
-                        let result = self.add(self.registers.b);
-                        self.registers.a = result;
-                    }
-                    ArithmeticTarget::C =>
-                    {
-                        let result = self.add(self.registers.c);
-                        self.registers.a = result;
-                    }
-                    ArithmeticTarget::D =>
-                    {
-                        let result = self.add(self.registers.d);
-                        self.registers.a = result;
-                    }
-                    ArithmeticTarget::E =>
-                    {
-                        let result = self.add(self.registers.e);
-                        self.registers.a = result;
-                    }
-                    ArithmeticTarget::H =>
-                    {
-                        let result = self.add(self.registers.h);
-                        self.registers.a = result;
-                    }
-                    ArithmeticTarget::L =>
-                    {
-                        let result = self.add(self.registers.l);
-                        self.registers.a = result;
-                    }
-                    _ => { /* TODO: support more targets */ }
+                    let result = self.add(value);
+                    self.registers.a = result;
+                }
+                else
+                {
+                    // TODO: support more targets
                 }
             }
 
             Instruction::ADDHL(target) =>
             {
-                match target
+                if let Some(value) = self.get_arithmetic_target_value16(target)
                 {
-                    ArithmeticTarget16::BC =>
-                    {
-                        let result = self.addhl(self.registers.get_bc());
-                        self.registers.set_hl(result);
-                    }
-                    ArithmeticTarget16::DE =>
-                    {
-                        let result = self.addhl(self.registers.get_de());
-                        self.registers.set_hl(result);
-                    }
-                    ArithmeticTarget16::HL =>
-                    {
-                        let result = self.addhl(self.registers.get_hl());
-                        self.registers.set_hl(result);
-                    }
-                    _ => { /* TODO: support more targets */ }
+                    let result = self.addhl(value);
+                    self.registers.set_hl(result);
+                }
+                else
+                {
+                    // TODO: support more targets
                 }
             }
 
             Instruction::SUB(target) =>
             {
-                match target
+                if let Some(value) = self.get_arithmetic_target_value(target)
                 {
-                    if let Some(value) = self.get_arithmetic_target_value(target)
-                    {
-                        let result = self.sub(value);
-                        self.registers.a = result;
-                    }
-                    else
-                    {
-                        // TODO: support more targets
-                    }
+                    let result = self.sub(value);
+                    self.registers.a = result;
+                }
+                else
+                {
+                    // TODO: support more targets
                 }
             }
 
             Instruction::SBC(target) =>
             {
-                match target
+                if let Some(value) = self.get_arithmetic_target_value(target)
                 {
-                    if let Some(value) = self.get_arithmetic_target_value(target)
-                    {
-                        let result = self.sbc(value);
-                        self.registers.a = result;
-                    }
-                    else
-                    {
-                        // TODO: support more targets
-                    }
+                    let result = self.sbc(value);
+                    self.registers.a = result;
+                }
+                else
+                {
+                    // TODO: support more targets
                 }
             }
 
@@ -144,6 +132,80 @@ impl CPU
                 {
                     let result = self.and(value);
                     self.registers.a = result;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::OR(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_value(target)
+                {
+                    let result = self.or(value);
+                    self.registers.a = result;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::XOR(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_value(target)
+                {
+                    let result = self.xor(value);
+                    self.registers.a = result;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::CP(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_value(target)
+                {
+                    self.sub(value);
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::INC(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    let result = initial + 1;
+                    *value = result;
+
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = (initial & 0xF) + 1 > 0xF;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::DEC(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    let result = initial - 1;
+                    *value = result;
+
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = true;
+                    self.registers.f.half_carry = initial & 0xF == 0;
                 }
                 else
                 {
@@ -205,9 +267,31 @@ impl CPU
         let result = self.registers.a & value;
 
         self.registers.f.zero = result == 0;
-        self.registers.f.subtract = 0;
-        self.registers.f.carry = 0;
-        self.registers.f.half_carry = 1;
+        self.registers.f.subtract = false;
+        self.registers.f.carry = false;
+        self.registers.f.half_carry = true;
+        result
+    }
+
+    fn or(&mut self, value: u8) -> u8
+    {
+        let result = self.registers.a | value;
+
+        self.registers.f.zero = result == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.carry = false;
+        self.registers.f.half_carry = false;
+        result
+    }
+
+    fn xor(&mut self, value: u8) -> u8
+    {
+        let result = self.registers.a ^ value;
+
+        self.registers.f.zero = result == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.carry = false;
+        self.registers.f.half_carry = false;
         result
     }
 }
