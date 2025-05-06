@@ -13,6 +13,12 @@ enum Instruction
     CP(ArithmeticTarget),
     INC(ArithmeticTarget),
     DEC(ArithmeticTarget),
+    CCF(),
+    SCF(),
+    RRA(),
+    RLA(),
+    RRCA(),
+    RLCA()
 }
 
 enum ArithmeticTarget
@@ -211,6 +217,73 @@ impl CPU
                 {
                     // TODO: support more targets
                 }
+            }
+
+            Instruction::CCF() =>
+            {
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+                self.registers.f.carry = !self.registers.f.carry;
+            }
+
+            Instruction::SCF() =>
+            {
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+                self.registers.f.carry = true;
+            }
+
+            Instruction::RRA() =>
+            {
+                let msb = if self.registers.f.carry { 1 << 7 } else { 0 };
+
+                let initial = self.registers.a;
+                let result = initial >> 1 | msb;
+                self.registers.a = result;
+
+                self.registers.f.zero = false;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+                self.registers.f.carry = initial & 0x1 == 1;
+            }
+
+            Instruction::RLA() =>
+            {
+                let lsb = if self.registers.f.carry { 1 } else { 0 };
+                let initial = self.registers.a;
+                let result = initial << 1 | lsb;
+                self.registers.a = result;
+
+                self.registers.f.zero = false;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+                self.registers.f.carry = initial & 0x80 == 1;
+            }
+
+            Instruction::RRCA() =>
+            {
+                let initial = self.registers.a;
+                let lsb = initial & 0x1;
+                let result = initial >> 1 | lsb << 7;
+                self.registers.a = result;
+
+                self.registers.f.zero = false;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+                self.registers.f.carry = lsb != 1;
+            }
+
+            Instruction::RLCA() =>
+            {
+                let initial = self.registers.a;
+                let msb = (initial & 0x80) >> 7;
+                let result = initial << 1 | msb;
+                self.registers.a = result;
+
+                self.registers.f.zero = false;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+                self.registers.f.carry = msb == 1;
             }
         }
     }
