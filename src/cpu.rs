@@ -18,7 +18,16 @@ enum Instruction
     RRA(),
     RLA(),
     RRCA(),
-    RLCA()
+    RLCA(),
+    CPL(),
+    BIT(u8, ArithmeticTarget),      // BIT u3,r8
+    BIT16(u8),                      // BIT u3,[HL] - Possibly wrong as HL is address
+    RES(u8, ArithmeticTarget),      // RES u3,r8
+    RES16(u8),                      // RES u3,[HL] - Possibly wrong as HL is address
+    SET(u8, ArithmeticTarget),      // SET u3,r8
+    SET16(u8),                      // SET u3,[HL] - Possibly wrong as HL is address
+    SRL(ArithmeticTarget),          // SRL r8
+    SRL16(),                        // SRL [HL] - Possibly wrong as HL is address
 }
 
 enum ArithmeticTarget
@@ -284,6 +293,108 @@ impl CPU
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
                 self.registers.f.carry = msb == 1;
+            }
+
+            Instruction::CPL() =>
+            {
+                let initial = self.registers.a;
+                self.registers.a = !initial;
+
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = true;
+            }
+
+            Instruction::BIT(bit_to_check, target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_value(target)
+                {
+                    let bit_set = ((1 << bit_to_check) & value) > 0;
+
+                    self.registers.f.zero = bit_set == false;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::BIT16(bit_to_check) =>
+            {
+                let value = self.registers.get_hl();
+                let bit_set = ((1 << bit_to_check) & value) > 0;
+
+                self.registers.f.zero = bit_set == false;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = false;
+            }
+
+            Instruction::RES(bit_to_set, target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    let result = !(1 << bit_to_set) & initial;
+                    *value = result;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::RES16(bit_to_set) =>
+            {
+                let value = self.registers.get_hl();
+                let result = !(1 << bit_to_set) & value;
+                self.registers.set_hl(result);
+            }
+
+            Instruction::SET(bit_to_set, target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    let result = (1 << bit_to_set) & initial;
+                    *value = result;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::SET16(bit_to_set) =>
+            {
+                let value = self.registers.get_hl();
+                let result = (1 << bit_to_set) & value;
+                self.registers.set_hl(result);
+            }
+
+            Instruction::SRL(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    // Preserve the 7th bit
+                    let result = (initial >> 1) & (initial & 0x80);
+                    *value = result;
+
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                    self.registers.f.carry = (initial & 0) > 0;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::SRL16() =>
+            {
+                // TODO
             }
         }
     }
