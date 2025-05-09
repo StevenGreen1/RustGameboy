@@ -16,9 +16,13 @@ enum Instruction
     CCF(),
     SCF(),
     RRA(),
+    RR(ArithmeticTarget),           // RR r8
     RLA(),
+    RL(ArithmeticTarget),           // RL r8
     RRCA(),
+    RRC(ArithmeticTarget),          // RRC r8
     RLCA(),
+    RLC(ArithmeticTarget),          // RLC r8
     CPL(),
     BIT(u8, ArithmeticTarget),      // BIT u3,r8
     BIT16(u8),                      // BIT u3,[HL] - Possibly wrong as HL is address
@@ -256,6 +260,27 @@ impl CPU
                 self.registers.f.carry = initial & 0x1 == 1;
             }
 
+            Instruction::RR(target) =>
+            {
+                let msb = if self.registers.f.carry { 1 << 7 } else { 0 };
+
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    let result = initial >> 1 | msb;
+                    *value = result;
+    
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                    self.registers.f.carry = initial & 0x1 == 1;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
             Instruction::RLA() =>
             {
                 let lsb = if self.registers.f.carry { 1 } else { 0 };
@@ -267,6 +292,27 @@ impl CPU
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
                 self.registers.f.carry = initial & 0x80 == 1;
+            }
+
+            Instruction::RL(target) =>
+            {
+                let lsb = if self.registers.f.carry { 1 } else { 0 };
+
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    let result = initial << 1 | lsb;
+                    *value = result;
+    
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                    self.registers.f.carry = initial & 0x80 == 1;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
             }
 
             Instruction::RRCA() =>
@@ -282,6 +328,27 @@ impl CPU
                 self.registers.f.carry = lsb != 1;
             }
 
+            Instruction::RRC(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    let lsb = initial & 0x1;
+                    let result = initial >> 1 | lsb << 7;
+                    *value = result;
+
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                    self.registers.f.carry = lsb != 1;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+
             Instruction::RLCA() =>
             {
                 let initial = self.registers.a;
@@ -293,6 +360,26 @@ impl CPU
                 self.registers.f.subtract = false;
                 self.registers.f.half_carry = false;
                 self.registers.f.carry = msb == 1;
+            }
+
+            Instruction::RLC(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    let msb = (initial & 0x80) >> 7;
+                    let result = initial << 1 | msb;
+                    *value = result;
+    
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                    self.registers.f.carry = msb == 1;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
             }
 
             Instruction::CPL() =>
