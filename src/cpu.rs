@@ -1,6 +1,9 @@
 mod registers;
 use cpu::registers::Registers;
 
+mod memorybus;
+use cpu::memorybus::MemoryBus;
+
 enum Instruction
 {
     ADD(ArithmeticTarget),
@@ -36,6 +39,19 @@ enum Instruction
     SWAP(ArithmeticTarget),         // SWAP r8
 }
 
+impl Instruction
+{
+    fn from_byte(byte: u8) -> Option<Instruction>
+    {
+        match byte
+        {
+            0x04 => Some(Instruction::INC(ArithmeticTarget::B)), // INC B
+            0x14 => Some(Instruction::INC(ArithmeticTarget::D)), // INC D
+            _ => /* TODO: Add mapping for rest of instructions */ None
+        }
+    }
+}
+
 enum ArithmeticTarget
 {
     A, B, C, D, E, H, L
@@ -48,11 +64,29 @@ enum ArithmeticTarget16
 
 struct CPU
 {
-    pub registers: Registers
+    pub registers: Registers,
+    pub pc: u16,
+    pub bus: MemoryBus
 }
 
 impl CPU
 {
+    fn step(&mut self)
+    {
+        let mut instruction_byte = self.bus.read_byte(self.pc);
+    
+        let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte)
+        {
+            self.execute(instruction)
+        }
+        else
+        {
+            panic!("Unkown instruction found for: 0x{:x}", instruction_byte);
+        };
+    
+        self.pc = next_pc;
+    }
+
     fn get_arithmetic_target_value(&self, target: ArithmeticTarget) -> Option<u8>
     {
         match target
@@ -91,8 +125,10 @@ impl CPU
         }
     }
 
-    fn execute(&mut self, instruction: Instruction)
+    fn execute(&mut self, instruction: Instruction) -> u16
     {
+        let mut pc_increment = 1;
+
         match instruction
         {
             Instruction::ADD(target) =>
@@ -541,6 +577,8 @@ impl CPU
                 }
             }
         }
+
+        return self.pc.wrapping_add(pc_increment)
     }
 
     fn add(&mut self, value: u8) -> u8
