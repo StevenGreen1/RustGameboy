@@ -31,7 +31,9 @@ enum Instruction
     SET(u8, ArithmeticTarget),      // SET u3,r8
     SET16(u8),                      // SET u3,[HL] - Possibly wrong as HL is address
     SRL(ArithmeticTarget),          // SRL r8
-    SRL16(),                        // SRL [HL] - Possibly wrong as HL is address
+    SRA(ArithmeticTarget),          // SRA r8
+    SLA(ArithmeticTarget),          // SLA r8
+    SWAP(ArithmeticTarget),         // SWAP r8
 }
 
 enum ArithmeticTarget
@@ -464,14 +466,14 @@ impl CPU
                 if let Some(value) = self.get_arithmetic_target_mut(target)
                 {
                     let initial = *value;
-                    // Preserve the 7th bit
-                    let result = (initial >> 1) & (initial & 0x80);
+                    // Right shift whole register
+                    let result = initial >> 1;
                     *value = result;
 
                     self.registers.f.zero = result == 0;
                     self.registers.f.subtract = false;
                     self.registers.f.half_carry = false;
-                    self.registers.f.carry = (initial & 0) > 0;
+                    self.registers.f.carry = (initial & 0x1) > 0;
                 }
                 else
                 {
@@ -479,9 +481,64 @@ impl CPU
                 }
             }
 
-            Instruction::SRL16() =>
+            Instruction::SRA(target) =>
             {
-                // TODO
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    // Right shift but preserve sign i.e. the 7th bit
+                    let result = (initial >> 1) & (initial & 0x80);
+                    *value = result;
+
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                    self.registers.f.carry = (initial & 0x1) > 0;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::SLA(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    // Shift but preserve sign i.e. the 7th bit
+                    let result = initial << 1;
+                    *value = result;
+
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                    self.registers.f.carry = (initial & 0x80) > 0;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::SWAP(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_mut(target)
+                {
+                    let initial = *value;
+                    // Shift but preserve sign i.e. the 7th bit
+                    let result = (initial << 4) & (initial >> 4);
+                    *value = result;
+
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                    self.registers.f.carry = false;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
             }
         }
     }
