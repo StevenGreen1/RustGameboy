@@ -8,6 +8,7 @@ mod instruction;
 use cpu::instruction::Instruction;
 use cpu::instruction::ArithmeticTarget;
 use cpu::instruction::ArithmeticTarget16;
+use cpu::instruction::JumpTest;
 
 struct CPU
 {
@@ -529,6 +530,19 @@ impl CPU
                     // TODO: support more targets
                 }
             }
+
+            Instruction::JP(test) =>
+            {
+                let jump_condition = match test
+                {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Always => true
+                };
+                return self.jump(jump_condition)
+            }
         }
 
         return self.pc.wrapping_add(pc_increment)
@@ -612,5 +626,24 @@ impl CPU
         self.registers.f.carry = false;
         self.registers.f.half_carry = false;
         result
+    }
+
+    fn jump(&self, should_jump: bool) -> u16
+    {
+        if should_jump
+        {
+            // Gameboy is little endian so read pc + 2 as most significant bit
+            // and pc + 1 as least significant bit
+            let least_significant_byte = self.bus.read_byte(self.pc + 1) as u16;
+            let most_significant_byte = self.bus.read_byte(self.pc + 2) as u16;
+            (most_significant_byte << 8) | least_significant_byte
+        }
+        else
+        {
+            // If we don't jump we need to still move the program
+            // counter forward by 3 since the jump instruction is
+            // 3 bytes wide (1 byte for tag and 2 bytes for jump address)
+            self.pc.wrapping_add(3)
+        }
     }
 }

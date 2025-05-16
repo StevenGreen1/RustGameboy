@@ -8,6 +8,15 @@ pub enum ArithmeticTarget16
     BC, DE, HL,
 }
 
+pub enum JumpTest
+{
+    NotZero,
+    Zero,
+    NotCarry,
+    Carry,
+    Always
+}
+
 pub enum Instruction
 {
     ADD(ArithmeticTarget),
@@ -41,6 +50,7 @@ pub enum Instruction
     SRA(ArithmeticTarget),          // SRA r8
     SLA(ArithmeticTarget),          // SLA r8
     SWAP(ArithmeticTarget),         // SWAP r8
+    JP(JumpTest),                   // Jump instructions
 }
 
 impl Instruction
