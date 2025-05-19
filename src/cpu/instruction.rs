@@ -27,9 +27,27 @@ pub enum LoadByteSource
     A, B, C, D, E, H, L, D8, HLI
 }
 
+pub enum LoadWordTarget
+{
+    AF, BC, DE, HL,
+}
+
+pub enum Indirect
+{
+    BCIndirect,
+    DEIndirect,
+    HLIndirectMinus,
+    HLIndirectPlus,
+    WordIndirect,
+    LastByteIndirect,
+}
+
 pub enum LoadType
 {
     Byte(LoadByteTarget, LoadByteSource),
+    Word(LoadWordTarget), // Source has to be direct input as no registers are big enough to occupy
+    AFromIndirect(Indirect),
+    IndirectFromA(Indirect),
 }
 
 pub enum Instruction

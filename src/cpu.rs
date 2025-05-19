@@ -12,6 +12,8 @@ use cpu::instruction::JumpTest;
 use cpu::instruction::LoadByteSource;
 use cpu::instruction::LoadByteTarget;
 use cpu::instruction::LoadType;
+use cpu::instruction::LoadWordTarget;
+use cpu::instruction::Indirect;
 
 struct CPU
 {
@@ -126,6 +128,53 @@ impl CPU
                             LoadByteSource::D8  => pc_increment = 2,
                             _                   => pc_increment = 1,
                         }
+                    }
+                    LoadType::Word(target) =>
+                    {
+                        let word = self.read_next_word();
+                        match target
+                        {
+                            LoadWordTarget::AF => self.registers.set_af(word),
+                            LoadWordTarget::BC => self.registers.set_bc(word),
+                            LoadWordTarget::DE => self.registers.set_de(word),
+                            LoadWordTarget::HL => self.registers.set_hl(word),
+                            _ => { panic!("TODO: implement other targets") }
+                        }
+                        pc_increment = 3;
+                    }
+                    LoadType::AFromIndirect(indirect) =>
+                    {
+                        self.registers.a = match indirect
+                        {
+                            Indirect::BCIndirect => self.bus.read_byte(self.registers.get_bc()),
+                            Indirect::DEIndirect => self.bus.read_byte(self.registers.get_de()),
+                            Indirect::HLIndirectMinus => 
+                            {
+                                let hl = self.registers.get_hl();
+                                self.registers.set_hl(hl.wrapping_sub(1));
+                                self.bus.read_byte(hl)
+                            },
+                            Indirect::HLIndirectPlus => 
+                            {
+                                let hl = self.registers.get_hl();
+                                self.registers.set_hl(hl.wrapping_add(1));
+                                self.bus.read_byte(hl)
+                            },
+                            Indirect::WordIndirect => 
+                            {
+                                let word = self.read_next_word();
+                                self.bus.read_byte(word)
+                            },
+                            Indirect::LastByteIndirect => 
+                            {
+                                self.bus.read_byte(0xFF00 + self.registers.c as u16)
+                            },
+                            _ => { panic!("TODO: implement other targets") }
+                        }
+                    }
+                    LoadType::IndirectFromA(indirect) =>
+                    {
+                        
                     }
                     _ => { panic!("TODO: implement other load types") }
                 }
@@ -597,6 +646,11 @@ impl CPU
     fn read_next_byte(&mut self) -> u8
     {
         return self.bus.read_byte(self.pc + 1)
+    }
+
+    fn read_next_word(&mut self) -> u16
+    {
+        return ((self.bus.read_byte(self.pc + 2) as u16) << 8) | (self.bus.read_byte(self.pc + 1) as u16)
     }
 
     fn add(&mut self, value: u8) -> u8
