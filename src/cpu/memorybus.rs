@@ -9,4 +9,9 @@ impl MemoryBus
     {
         self.memory[address as usize]
     }
+
+    pub fn write_byte(&mut self, address: u16, value: u8)
+    {
+        self.memory[address as usize] = value;
+    }
 }

@@ -9,6 +9,9 @@ use cpu::instruction::Instruction;
 use cpu::instruction::ArithmeticTarget;
 use cpu::instruction::ArithmeticTarget16;
 use cpu::instruction::JumpTest;
+use cpu::instruction::LoadByteSource;
+use cpu::instruction::LoadByteTarget;
+use cpu::instruction::LoadType;
 
 struct CPU
 {
@@ -85,6 +88,49 @@ impl CPU
 
         match instruction
         {
+            Instruction::LD(load_type) =>
+            {
+                match load_type
+                {
+                    LoadType::Byte(target, source) =>
+                    {
+                        let source_value = match source
+                        {
+                            LoadByteSource::A => self.registers.a,
+                            LoadByteSource::B => self.registers.b,
+                            LoadByteSource::C => self.registers.c,
+                            LoadByteSource::D => self.registers.d,
+                            LoadByteSource::E => self.registers.e,
+                            LoadByteSource::H => self.registers.h,
+                            LoadByteSource::L => self.registers.l,
+                            LoadByteSource::D8 => self.read_next_byte(),
+                            LoadByteSource::HLI => self.bus.read_byte(self.registers.get_hl()),
+                            _ => { panic!("TODO: implement other sources") }
+                        };
+
+                        match target
+                        {
+                            LoadByteTarget::A => self.registers.a = source_value,
+                            LoadByteTarget::B => self.registers.b = source_value,
+                            LoadByteTarget::C => self.registers.c = source_value,
+                            LoadByteTarget::D => self.registers.d = source_value,
+                            LoadByteTarget::E => self.registers.e = source_value,
+                            LoadByteTarget::H => self.registers.h = source_value,
+                            LoadByteTarget::L => self.registers.l = source_value,
+                            LoadByteTarget::HLI => self.bus.write_byte(self.registers.get_hl(), source_value),
+                            _ => { panic!("TODO: implement other targets") }
+                        }
+
+                        match source
+                        {
+                            LoadByteSource::D8  => pc_increment = 2,
+                            _                   => pc_increment = 1,
+                        }
+                    }
+                    _ => { panic!("TODO: implement other load types") }
+                }
+            }
+
             Instruction::ADD(target) =>
             {
                 if let Some(value) = self.get_arithmetic_target_value(target)
@@ -546,6 +592,11 @@ impl CPU
         }
 
         return self.pc.wrapping_add(pc_increment)
+    }
+
+    fn read_next_byte(&mut self) -> u8
+    {
+        return self.bus.read_byte(self.pc + 1)
     }
 
     fn add(&mut self, value: u8) -> u8
