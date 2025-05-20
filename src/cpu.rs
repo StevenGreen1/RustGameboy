@@ -174,7 +174,41 @@ impl CPU
                     }
                     LoadType::IndirectFromA(indirect) =>
                     {
-                        
+                        match indirect
+                        {
+                            Indirect::BCIndirect => 
+                            {
+                                let address = self.registers.get_bc();
+                                self.bus.write_byte(address, self.registers.a)
+                            },
+                            Indirect::DEIndirect => 
+                            {
+                                let address = self.registers.get_de();
+                                self.bus.write_byte(address, self.registers.a)
+                            },
+                            Indirect::HLIndirectMinus => 
+                            {
+                                let hl = self.registers.get_hl();
+                                self.registers.set_hl(hl.wrapping_sub(1));
+                                self.bus.write_byte(hl, self.registers.a)
+                            },
+                            Indirect::HLIndirectPlus => 
+                            {
+                                let hl = self.registers.get_hl();
+                                self.registers.set_hl(hl.wrapping_add(1));
+                                self.bus.write_byte(hl, self.registers.a)
+                            },
+                            Indirect::WordIndirect => 
+                            {
+                                let word = self.read_next_word();
+                                self.bus.write_byte(word, self.registers.a)
+                            },
+                            Indirect::LastByteIndirect => 
+                            {
+                                let c_reg = self.registers.c as u16;
+                                self.bus.write_byte(0xFF00 + c_reg, self.registers.a)
+                            },
+                        }
                     }
                     _ => { panic!("TODO: implement other load types") }
                 }
