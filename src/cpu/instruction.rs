@@ -53,10 +53,14 @@ pub enum LoadType
     Word(LoadWordTarget), // Source has to be direct input as no registers are big enough to occupy
     AFromIndirect(Indirect),
     IndirectFromA(Indirect),
+    AFromByteAddress(),
+    ByteAddressFromA(),    
 }
 
 pub enum Instruction
 {
+    CALL(JumpTest),
+    RETURN(JumpTest),
     PUSH(StackTarget),
     POP(StackTarget),
     LD(LoadType),

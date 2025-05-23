@@ -94,6 +94,24 @@ impl CPU
 
         match instruction
         {
+            Instruction::CALL(test) =>
+            {
+                let jump_condition = match test
+                {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    _ => { panic!("TODO: support more conditions") }
+                };
+                self.call(jump_condition);
+            }
+            Instruction::RETURN(test) =>
+            {
+                let jump_condition = match test
+                {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    _ => { panic!("TODO: support more conditions") }
+                };
+                self.return_(jump_condition);
+            }
             Instruction::PUSH(source) =>
             {
                 let value = match source
@@ -235,6 +253,18 @@ impl CPU
                                 self.bus.write_byte(0xFF00 + c_reg, self.registers.a)
                             },
                         }
+                    }
+                    LoadType::AFromByteAddress() =>
+                    {
+                        let offset = self.read_next_byte() as u16;
+                        self.registers.a = self.bus.read_byte(0xFF00 + offset);
+                        pc_increment = 2
+                    }
+                    LoadType::ByteAddressFromA() =>
+                    {
+                        let offset = self.read_next_byte() as u16;
+                        self.bus.write_byte(0xFF00 + offset, self.registers.a);
+                        pc_increment = 2
                     }
                     _ => { panic!("TODO: implement other load types") }
                 }
@@ -831,4 +861,30 @@ impl CPU
     
         (msb << 8) | lsb
     }
+
+    fn call(&mut self, should_jump: bool) -> u16
+    {
+        let next_pc = self.pc.wrapping_add(3);
+        if should_jump
+        {
+            self.push(next_pc);
+            self.read_next_word()
+        }
+        else
+        {
+            next_pc
+        }
+    }
+
+    fn return_(&mut self, should_jump: bool) -> u16
+    {
+        if should_jump
+        {
+            self.pop()
+        }
+        else
+        {
+            self.pc.wrapping_add(1)
+        }
+      }
 }
