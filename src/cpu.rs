@@ -24,6 +24,7 @@ struct CPU
     pub pc: u16,
     pub sp: u16,
     pub bus: MemoryBus,
+    is_halted: bool,
 }
 
 impl CPU
@@ -47,7 +48,15 @@ impl CPU
             panic!("Unkown instruction found for: {}", description)
         };
     
-        self.pc = next_pc;
+        // To implement
+        //if self.bus.has_interrupt()
+        //{
+        //    self.is_halted = false;
+        //}
+        if !self.is_halted
+        {
+            self.pc = next_pc;
+        }
     }
 
     fn get_arithmetic_target_value(&self, target: ArithmeticTarget) -> Option<u8>
@@ -94,6 +103,13 @@ impl CPU
 
         match instruction
         {
+            Instruction::NOP() =>
+            {
+            }
+            Instruction::HALT() =>
+            {
+                self.is_halted = true;
+            }
             Instruction::CALL(test) =>
             {
                 let jump_condition = match test

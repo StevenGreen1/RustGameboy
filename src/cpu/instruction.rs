@@ -59,6 +59,8 @@ pub enum LoadType
 
 pub enum Instruction
 {
+    NOP(),
+    HALT(),
     CALL(JumpTest),
     RETURN(JumpTest),
     PUSH(StackTarget),
