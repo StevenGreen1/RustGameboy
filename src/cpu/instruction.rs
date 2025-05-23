@@ -8,6 +8,11 @@ pub enum ArithmeticTarget16
     BC, DE, HL,
 }
 
+pub enum StackTarget
+{
+    BC, DE, HL,
+}
+
 pub enum JumpTest
 {
     NotZero,
@@ -52,6 +57,8 @@ pub enum LoadType
 
 pub enum Instruction
 {
+    PUSH(StackTarget),
+    POP(StackTarget),
     LD(LoadType),
     ADD(ArithmeticTarget),
     ADDHL(ArithmeticTarget16),

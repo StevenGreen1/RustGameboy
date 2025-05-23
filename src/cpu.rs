@@ -5,15 +5,18 @@ mod memorybus;
 use crate::cpu::memorybus::MemoryBus;
 
 mod instruction;
-use crate::cpu::instruction::Instruction;
-use crate::cpu::instruction::ArithmeticTarget;
-use crate::cpu::instruction::ArithmeticTarget16;
-use crate::cpu::instruction::JumpTest;
-use crate::cpu::instruction::LoadByteSource;
-use crate::cpu::instruction::LoadByteTarget;
-use crate::cpu::instruction::LoadType;
-use crate::cpu::instruction::LoadWordTarget;
-use crate::cpu::instruction::Indirect;
+use crate::cpu::instruction::{
+    Instruction,
+    ArithmeticTarget,
+    ArithmeticTarget16,
+    JumpTest,
+    LoadByteSource,
+    LoadByteTarget,
+    LoadType,
+    LoadWordTarget,
+    Indirect,
+    StackTarget,
+};
 
 struct CPU
 {
@@ -91,6 +94,28 @@ impl CPU
 
         match instruction
         {
+            Instruction::PUSH(source) =>
+            {
+                let value = match source
+                {
+                    StackTarget::BC => self.registers.get_bc(),
+                    StackTarget::DE => self.registers.get_de(),
+                    StackTarget::HL => self.registers.get_hl(),
+                    _ => { panic!("TODO: support more targets") }
+                };
+                self.push(value);
+            }
+            Instruction::POP(target) =>
+            {
+                let result = self.pop();
+                match target
+                {
+                    StackTarget::BC => self.registers.set_bc(result),
+                    StackTarget::DE => self.registers.set_de(result),
+                    StackTarget::HL => self.registers.set_hl(result),
+                    _ => { panic!("TODO: support more targets") }
+                };
+            }
             Instruction::LD(load_type) =>
             {
                 match load_type
@@ -785,5 +810,25 @@ impl CPU
             // 3 bytes wide (1 byte for tag and 2 bytes for jump address)
             self.pc.wrapping_add(3)
         }
+    }
+
+    fn push(&mut self, value: u16)
+    {
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.write_byte(self.sp, ((value & 0xFF00) >> 8) as u8);
+    
+        self.sp = self.sp.wrapping_sub(1);
+        self.bus.write_byte(self.sp, (value & 0xFF) as u8);
+    }
+
+    fn pop(&mut self) -> u16
+    {
+        let lsb = self.bus.read_byte(self.sp) as u16;
+        self.sp = self.sp.wrapping_add(1);
+    
+        let msb = self.bus.read_byte(self.sp) as u16;
+        self.sp = self.sp.wrapping_add(1);
+    
+        (msb << 8) | lsb
     }
 }
