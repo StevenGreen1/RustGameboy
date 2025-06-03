@@ -1,4 +1,5 @@
 mod cpu;
+pub mod gpu;
 //mod registers;
 //use registers::Registers;
 
