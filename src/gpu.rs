@@ -2,9 +2,8 @@ pub const VRAM_BEGIN: usize = 0x8000;
 pub const VRAM_END: usize = 0x9FFF;
 pub const VRAM_SIZE: usize = VRAM_END - VRAM_BEGIN + 1;
 
-#[derive(Copy,Clone)]
-enum TilePixelValue
-{
+#[derive(Copy, Clone)]
+enum TilePixelValue {
     Zero,
     One,
     Two,
@@ -13,32 +12,26 @@ enum TilePixelValue
 
 type Tile = [[TilePixelValue; 8]; 8];
 
-fn empty_tile() -> Tile
-{
+fn empty_tile() -> Tile {
     [[TilePixelValue::Zero; 8]; 8]
 }
 
-pub struct GPU
-{
+pub struct GPU {
     vram: [u8; VRAM_SIZE],
     tile_set: [Tile; 384],
 }
 
-impl GPU
-{
-    pub fn read_vram(&self, address: usize) -> u8
-    {
+impl GPU {
+    pub fn read_vram(&self, address: usize) -> u8 {
         self.vram[address]
     }
 
-    pub fn write_vram(&mut self, index: usize, value: u8)
-    {
+    pub fn write_vram(&mut self, index: usize, value: u8) {
         self.vram[index] = value;
         // If our index is greater than 0x1800, we're not writing to the tile set storage
         // so we can just return.
-        if index >= 0x1800
-        {
-            return
+        if index >= 0x1800 {
+            return;
         }
 
         // Tiles rows are encoded in two bytes with the first byte always
@@ -58,8 +51,7 @@ impl GPU
         let row_index = (index % 16) / 2;
 
         // Now we're going to loop 8 times to get the 8 pixels that make up a given row.
-        for pixel_index in 0..8
-        {
+        for pixel_index in 0..8 {
             // To determine a pixel's value we must first find the corresponding bit that encodes
             // that pixels value:
             // 1111_1111
@@ -86,8 +78,7 @@ impl GPU
             // Finally we can tell which of the four tile values the pixel is. For example, if the least
             // significant byte's bit is 1 and the most significant byte's bit is also 1, then we
             // have tile value `Three`.
-            let value = match (lsb != 0, msb != 0)
-            {
+            let value = match (lsb != 0, msb != 0) {
                 (true, true) => TilePixelValue::Three,
                 (false, true) => TilePixelValue::Two,
                 (true, false) => TilePixelValue::One,
@@ -96,6 +87,5 @@ impl GPU
 
             self.tile_set[tile_index][row_index][pixel_index] = value;
         }
-
     }
 }
