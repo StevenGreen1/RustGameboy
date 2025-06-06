@@ -10,7 +10,7 @@ use crate::cpu::instruction::{
     LoadByteTarget, LoadType, LoadWordTarget, StackTarget,
 };
 
-struct CPU
+pub struct CPU
 {
     pub registers: Registers,
     pub pc: u16,
@@ -21,6 +21,11 @@ struct CPU
 
 impl CPU
 {
+    pub fn new() -> Self
+    {
+        CPU { registers: Registers::new(0), pc: 0, sp: 0, bus: MemoryBus::new(), is_halted: false }
+    }
+
     fn step(&mut self)
     {
         let mut instruction_byte = self.bus.read_byte(self.pc);

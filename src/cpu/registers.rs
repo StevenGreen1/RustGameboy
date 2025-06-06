@@ -53,7 +53,16 @@ impl Registers
     // Public constructor
     pub fn new(val: u8) -> Self
     {
-        Self { a: val, b: val, c: val, d: val, e: val, f: FlagsRegister::from(val), h: val, l: val }
+        Registers {
+            a: val,
+            b: val,
+            c: val,
+            d: val,
+            e: val,
+            f: FlagsRegister::from(val),
+            h: val,
+            l: val,
+        }
     }
 
     // The F bit in the register

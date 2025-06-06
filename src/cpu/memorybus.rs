@@ -11,6 +11,11 @@ pub struct MemoryBus
 
 impl MemoryBus
 {
+    pub fn new() -> Self
+    {
+        Self { memory: [0; 0xFFFF], gpu: GPU::new() }
+    }
+
     pub fn read_byte(&self, address: u16) -> u8
     {
         let address = address as usize;

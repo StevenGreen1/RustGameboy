@@ -10,8 +10,12 @@ use winit::{
     window::WindowBuilder,
 };
 
+use std::{thread, time::Duration};
+
 fn main() -> Result<(), pixels::Error>
 {
+    let cpu = cpu::CPU::new();
+
     let event_loop = EventLoop::new().unwrap();
 
     let window_size = PhysicalSize::new(320, 240);
@@ -52,6 +56,11 @@ fn main() -> Result<(), pixels::Error>
                                 window_size.height,
                                 true,
                             );
+                            if pixels.render().is_err()
+                            {
+                                event_loop_target.exit();
+                            }
+                            thread::sleep(Duration::from_millis(500));
                         }
                     }
                 }
@@ -88,7 +97,6 @@ fn main() -> Result<(), pixels::Error>
 
 fn draw_checkerboard(frame: &mut [u8], width: u32, height: u32, flip: bool)
 {
-    println!("Draw");
     let square_size = 20;
 
     for y in 0..height

@@ -26,6 +26,11 @@ pub struct GPU
 
 impl GPU
 {
+    pub fn new() -> Self
+    {
+        Self { vram: [0; VRAM_SIZE], tile_set: std::array::from_fn(|_| empty_tile()) }
+    }
+
     pub fn read_vram(&self, address: usize) -> u8
     {
         self.vram[address]
