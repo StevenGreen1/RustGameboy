@@ -6,16 +6,8 @@ use crate::cpu::memorybus::MemoryBus;
 
 mod instruction;
 use crate::cpu::instruction::{
-    Instruction,
-    ArithmeticTarget,
-    ArithmeticTarget16,
-    JumpTest,
-    LoadByteSource,
-    LoadByteTarget,
-    LoadType,
-    LoadWordTarget,
-    Indirect,
-    StackTarget,
+    ArithmeticTarget, ArithmeticTarget16, Indirect, Instruction, JumpTest, LoadByteSource,
+    LoadByteTarget, LoadType, LoadWordTarget, StackTarget,
 };
 
 struct CPU
@@ -44,10 +36,11 @@ impl CPU
         }
         else
         {
-            let description = format!("0x{}{:x}", if prefixed { "cb" } else { "" }, instruction_byte);
+            let description =
+                format!("0x{}{:x}", if prefixed { "cb" } else { "" }, instruction_byte);
             panic!("Unkown instruction found for: {}", description)
         };
-    
+
         // To implement
         //if self.bus.has_interrupt()
         //{
@@ -93,7 +86,7 @@ impl CPU
         {
             ArithmeticTarget16::BC => Some(self.registers.get_bc()),
             ArithmeticTarget16::DE => Some(self.registers.get_de()),
-            ArithmeticTarget16::HL => Some(self.registers.get_hl())
+            ArithmeticTarget16::HL => Some(self.registers.get_hl()),
         }
     }
 
@@ -104,8 +97,7 @@ impl CPU
         match instruction
         {
             Instruction::NOP() =>
-            {
-            }
+            {}
             Instruction::HALT() =>
             {
                 self.is_halted = true;
@@ -115,7 +107,10 @@ impl CPU
                 let jump_condition = match test
                 {
                     JumpTest::NotZero => !self.registers.f.zero,
-                    _ => { panic!("TODO: support more conditions") }
+                    _ =>
+                    {
+                        panic!("TODO: support more conditions")
+                    }
                 };
                 self.call(jump_condition);
             }
@@ -124,7 +119,10 @@ impl CPU
                 let jump_condition = match test
                 {
                     JumpTest::NotZero => !self.registers.f.zero,
-                    _ => { panic!("TODO: support more conditions") }
+                    _ =>
+                    {
+                        panic!("TODO: support more conditions")
+                    }
                 };
                 self.return_(jump_condition);
             }
@@ -135,7 +133,10 @@ impl CPU
                     StackTarget::BC => self.registers.get_bc(),
                     StackTarget::DE => self.registers.get_de(),
                     StackTarget::HL => self.registers.get_hl(),
-                    _ => { panic!("TODO: support more targets") }
+                    _ =>
+                    {
+                        panic!("TODO: support more targets")
+                    }
                 };
                 self.push(value);
             }
@@ -147,144 +148,159 @@ impl CPU
                     StackTarget::BC => self.registers.set_bc(result),
                     StackTarget::DE => self.registers.set_de(result),
                     StackTarget::HL => self.registers.set_hl(result),
-                    _ => { panic!("TODO: support more targets") }
+                    _ =>
+                    {
+                        panic!("TODO: support more targets")
+                    }
                 };
             }
-            Instruction::LD(load_type) =>
+            Instruction::LD(load_type) => match load_type
             {
-                match load_type
+                LoadType::Byte(target, source) =>
                 {
-                    LoadType::Byte(target, source) =>
+                    let source_value = match source
                     {
-                        let source_value = match source
+                        LoadByteSource::A => self.registers.a,
+                        LoadByteSource::B => self.registers.b,
+                        LoadByteSource::C => self.registers.c,
+                        LoadByteSource::D => self.registers.d,
+                        LoadByteSource::E => self.registers.e,
+                        LoadByteSource::H => self.registers.h,
+                        LoadByteSource::L => self.registers.l,
+                        LoadByteSource::D8 => self.read_next_byte(),
+                        LoadByteSource::HLI => self.bus.read_byte(self.registers.get_hl()),
+                        _ =>
                         {
-                            LoadByteSource::A => self.registers.a,
-                            LoadByteSource::B => self.registers.b,
-                            LoadByteSource::C => self.registers.c,
-                            LoadByteSource::D => self.registers.d,
-                            LoadByteSource::E => self.registers.e,
-                            LoadByteSource::H => self.registers.h,
-                            LoadByteSource::L => self.registers.l,
-                            LoadByteSource::D8 => self.read_next_byte(),
-                            LoadByteSource::HLI => self.bus.read_byte(self.registers.get_hl()),
-                            _ => { panic!("TODO: implement other sources") }
-                        };
-
-                        match target
-                        {
-                            LoadByteTarget::A => self.registers.a = source_value,
-                            LoadByteTarget::B => self.registers.b = source_value,
-                            LoadByteTarget::C => self.registers.c = source_value,
-                            LoadByteTarget::D => self.registers.d = source_value,
-                            LoadByteTarget::E => self.registers.e = source_value,
-                            LoadByteTarget::H => self.registers.h = source_value,
-                            LoadByteTarget::L => self.registers.l = source_value,
-                            LoadByteTarget::HLI => self.bus.write_byte(self.registers.get_hl(), source_value),
-                            _ => { panic!("TODO: implement other targets") }
+                            panic!("TODO: implement other sources")
                         }
+                    };
 
-                        match source
+                    match target
+                    {
+                        LoadByteTarget::A => self.registers.a = source_value,
+                        LoadByteTarget::B => self.registers.b = source_value,
+                        LoadByteTarget::C => self.registers.c = source_value,
+                        LoadByteTarget::D => self.registers.d = source_value,
+                        LoadByteTarget::E => self.registers.e = source_value,
+                        LoadByteTarget::H => self.registers.h = source_value,
+                        LoadByteTarget::L => self.registers.l = source_value,
+                        LoadByteTarget::HLI =>
                         {
-                            LoadByteSource::D8  => pc_increment = 2,
-                            _                   => pc_increment = 1,
+                            self.bus.write_byte(self.registers.get_hl(), source_value)
+                        }
+                        _ =>
+                        {
+                            panic!("TODO: implement other targets")
                         }
                     }
-                    LoadType::Word(target) =>
+
+                    match source
+                    {
+                        LoadByteSource::D8 => pc_increment = 2,
+                        _ => pc_increment = 1,
+                    }
+                }
+                LoadType::Word(target) =>
+                {
+                    let word = self.read_next_word();
+                    match target
+                    {
+                        LoadWordTarget::AF => self.registers.set_af(word),
+                        LoadWordTarget::BC => self.registers.set_bc(word),
+                        LoadWordTarget::DE => self.registers.set_de(word),
+                        LoadWordTarget::HL => self.registers.set_hl(word),
+                        _ =>
+                        {
+                            panic!("TODO: implement other targets")
+                        }
+                    }
+                    pc_increment = 3;
+                }
+                LoadType::AFromIndirect(indirect) =>
+                {
+                    self.registers.a = match indirect
+                    {
+                        Indirect::BCIndirect => self.bus.read_byte(self.registers.get_bc()),
+                        Indirect::DEIndirect => self.bus.read_byte(self.registers.get_de()),
+                        Indirect::HLIndirectMinus =>
+                        {
+                            let hl = self.registers.get_hl();
+                            self.registers.set_hl(hl.wrapping_sub(1));
+                            self.bus.read_byte(hl)
+                        }
+                        Indirect::HLIndirectPlus =>
+                        {
+                            let hl = self.registers.get_hl();
+                            self.registers.set_hl(hl.wrapping_add(1));
+                            self.bus.read_byte(hl)
+                        }
+                        Indirect::WordIndirect =>
+                        {
+                            let word = self.read_next_word();
+                            self.bus.read_byte(word)
+                        }
+                        Indirect::LastByteIndirect =>
+                        {
+                            self.bus.read_byte(0xFF00 + self.registers.c as u16)
+                        }
+                        _ =>
+                        {
+                            panic!("TODO: implement other targets")
+                        }
+                    }
+                }
+                LoadType::IndirectFromA(indirect) => match indirect
+                {
+                    Indirect::BCIndirect =>
+                    {
+                        let address = self.registers.get_bc();
+                        self.bus.write_byte(address, self.registers.a)
+                    }
+                    Indirect::DEIndirect =>
+                    {
+                        let address = self.registers.get_de();
+                        self.bus.write_byte(address, self.registers.a)
+                    }
+                    Indirect::HLIndirectMinus =>
+                    {
+                        let hl = self.registers.get_hl();
+                        self.registers.set_hl(hl.wrapping_sub(1));
+                        self.bus.write_byte(hl, self.registers.a)
+                    }
+                    Indirect::HLIndirectPlus =>
+                    {
+                        let hl = self.registers.get_hl();
+                        self.registers.set_hl(hl.wrapping_add(1));
+                        self.bus.write_byte(hl, self.registers.a)
+                    }
+                    Indirect::WordIndirect =>
                     {
                         let word = self.read_next_word();
-                        match target
-                        {
-                            LoadWordTarget::AF => self.registers.set_af(word),
-                            LoadWordTarget::BC => self.registers.set_bc(word),
-                            LoadWordTarget::DE => self.registers.set_de(word),
-                            LoadWordTarget::HL => self.registers.set_hl(word),
-                            _ => { panic!("TODO: implement other targets") }
-                        }
-                        pc_increment = 3;
+                        self.bus.write_byte(word, self.registers.a)
                     }
-                    LoadType::AFromIndirect(indirect) =>
+                    Indirect::LastByteIndirect =>
                     {
-                        self.registers.a = match indirect
-                        {
-                            Indirect::BCIndirect => self.bus.read_byte(self.registers.get_bc()),
-                            Indirect::DEIndirect => self.bus.read_byte(self.registers.get_de()),
-                            Indirect::HLIndirectMinus => 
-                            {
-                                let hl = self.registers.get_hl();
-                                self.registers.set_hl(hl.wrapping_sub(1));
-                                self.bus.read_byte(hl)
-                            },
-                            Indirect::HLIndirectPlus => 
-                            {
-                                let hl = self.registers.get_hl();
-                                self.registers.set_hl(hl.wrapping_add(1));
-                                self.bus.read_byte(hl)
-                            },
-                            Indirect::WordIndirect => 
-                            {
-                                let word = self.read_next_word();
-                                self.bus.read_byte(word)
-                            },
-                            Indirect::LastByteIndirect => 
-                            {
-                                self.bus.read_byte(0xFF00 + self.registers.c as u16)
-                            },
-                            _ => { panic!("TODO: implement other targets") }
-                        }
+                        let c_reg = self.registers.c as u16;
+                        self.bus.write_byte(0xFF00 + c_reg, self.registers.a)
                     }
-                    LoadType::IndirectFromA(indirect) =>
-                    {
-                        match indirect
-                        {
-                            Indirect::BCIndirect => 
-                            {
-                                let address = self.registers.get_bc();
-                                self.bus.write_byte(address, self.registers.a)
-                            },
-                            Indirect::DEIndirect => 
-                            {
-                                let address = self.registers.get_de();
-                                self.bus.write_byte(address, self.registers.a)
-                            },
-                            Indirect::HLIndirectMinus => 
-                            {
-                                let hl = self.registers.get_hl();
-                                self.registers.set_hl(hl.wrapping_sub(1));
-                                self.bus.write_byte(hl, self.registers.a)
-                            },
-                            Indirect::HLIndirectPlus => 
-                            {
-                                let hl = self.registers.get_hl();
-                                self.registers.set_hl(hl.wrapping_add(1));
-                                self.bus.write_byte(hl, self.registers.a)
-                            },
-                            Indirect::WordIndirect => 
-                            {
-                                let word = self.read_next_word();
-                                self.bus.write_byte(word, self.registers.a)
-                            },
-                            Indirect::LastByteIndirect => 
-                            {
-                                let c_reg = self.registers.c as u16;
-                                self.bus.write_byte(0xFF00 + c_reg, self.registers.a)
-                            },
-                        }
-                    }
-                    LoadType::AFromByteAddress() =>
-                    {
-                        let offset = self.read_next_byte() as u16;
-                        self.registers.a = self.bus.read_byte(0xFF00 + offset);
-                        pc_increment = 2
-                    }
-                    LoadType::ByteAddressFromA() =>
-                    {
-                        let offset = self.read_next_byte() as u16;
-                        self.bus.write_byte(0xFF00 + offset, self.registers.a);
-                        pc_increment = 2
-                    }
-                    _ => { panic!("TODO: implement other load types") }
+                },
+                LoadType::AFromByteAddress() =>
+                {
+                    let offset = self.read_next_byte() as u16;
+                    self.registers.a = self.bus.read_byte(0xFF00 + offset);
+                    pc_increment = 2
                 }
-            }
+                LoadType::ByteAddressFromA() =>
+                {
+                    let offset = self.read_next_byte() as u16;
+                    self.bus.write_byte(0xFF00 + offset, self.registers.a);
+                    pc_increment = 2
+                }
+                _ =>
+                {
+                    panic!("TODO: implement other load types")
+                }
+            },
 
             Instruction::ADD(target) =>
             {
@@ -462,7 +478,7 @@ impl CPU
                     let initial = *value;
                     let result = initial >> 1 | msb;
                     *value = result;
-    
+
                     self.registers.f.zero = result == 0;
                     self.registers.f.subtract = false;
                     self.registers.f.half_carry = false;
@@ -496,7 +512,7 @@ impl CPU
                     let initial = *value;
                     let result = initial << 1 | lsb;
                     *value = result;
-    
+
                     self.registers.f.zero = result == 0;
                     self.registers.f.subtract = false;
                     self.registers.f.half_carry = false;
@@ -541,7 +557,6 @@ impl CPU
                 }
             }
 
-
             Instruction::RLCA() =>
             {
                 let initial = self.registers.a;
@@ -563,7 +578,7 @@ impl CPU
                     let msb = (initial & 0x80) >> 7;
                     let result = initial << 1 | msb;
                     *value = result;
-    
+
                     self.registers.f.zero = result == 0;
                     self.registers.f.subtract = false;
                     self.registers.f.half_carry = false;
@@ -740,23 +755,24 @@ impl CPU
                     JumpTest::NotCarry => !self.registers.f.carry,
                     JumpTest::Zero => self.registers.f.zero,
                     JumpTest::Carry => self.registers.f.carry,
-                    JumpTest::Always => true
+                    JumpTest::Always => true,
                 };
-                return self.jump(jump_condition)
+                return self.jump(jump_condition);
             }
         }
 
-        return self.pc.wrapping_add(pc_increment)
+        return self.pc.wrapping_add(pc_increment);
     }
 
     fn read_next_byte(&mut self) -> u8
     {
-        return self.bus.read_byte(self.pc + 1)
+        return self.bus.read_byte(self.pc + 1);
     }
 
     fn read_next_word(&mut self) -> u16
     {
-        return ((self.bus.read_byte(self.pc + 2) as u16) << 8) | (self.bus.read_byte(self.pc + 1) as u16)
+        return ((self.bus.read_byte(self.pc + 2) as u16) << 8)
+            | (self.bus.read_byte(self.pc + 1) as u16);
     }
 
     fn add(&mut self, value: u8) -> u8
@@ -862,7 +878,7 @@ impl CPU
     {
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, ((value & 0xFF00) >> 8) as u8);
-    
+
         self.sp = self.sp.wrapping_sub(1);
         self.bus.write_byte(self.sp, (value & 0xFF) as u8);
     }
@@ -871,10 +887,10 @@ impl CPU
     {
         let lsb = self.bus.read_byte(self.sp) as u16;
         self.sp = self.sp.wrapping_add(1);
-    
+
         let msb = self.bus.read_byte(self.sp) as u16;
         self.sp = self.sp.wrapping_add(1);
-    
+
         (msb << 8) | lsb
     }
 
@@ -902,5 +918,5 @@ impl CPU
         {
             self.pc.wrapping_add(1)
         }
-      }
+    }
 }

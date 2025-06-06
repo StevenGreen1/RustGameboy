@@ -8,7 +8,7 @@ pub struct MemoryBus
     memory: [u8; 0xFFFF],
     gpu: GPU,
 }
-  
+
 impl MemoryBus
 {
     pub fn read_byte(&self, address: u16) -> u8
@@ -16,14 +16,8 @@ impl MemoryBus
         let address = address as usize;
         match address
         {
-            VRAM_BEGIN ..= VRAM_END =>
-            {
-                self.gpu.read_vram(address - VRAM_BEGIN)
-            }
-            _ =>
-            {
-                self.memory[address]
-            }
+            VRAM_BEGIN..=VRAM_END => self.gpu.read_vram(address - VRAM_BEGIN),
+            _ => self.memory[address],
         }
     }
 
@@ -32,16 +26,8 @@ impl MemoryBus
         let address = address as usize;
         match address
         {
-            VRAM_BEGIN ..= VRAM_END =>
-            {
-                self.gpu.write_vram(address - VRAM_BEGIN, value)
-            }
-            _ =>
-            {
-                self.memory[address] = value
-            }
+            VRAM_BEGIN..=VRAM_END => self.gpu.write_vram(address - VRAM_BEGIN, value),
+            _ => self.memory[address] = value,
         }
-
-        
     }
 }

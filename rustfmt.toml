@@ -1,3 +1,18 @@
 # rustfmt.toml
 max_width = 100
 use_small_heuristics = "Max"
+
+unstable_features = true
+
+# Brace on the next line (Allman style)
+brace_style = "AlwaysNextLine"
+control_brace_style = "AlwaysNextLine"
+
+# Function parameter layout: each on its own line
+fn_params_layout = "Tall"
+
+# Force where-clauses to wrap to multiple lines
+where_single_line = false
+
+# Better expression overflow formatting
+overflow_delimited_expr = true
