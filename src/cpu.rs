@@ -26,7 +26,7 @@ impl CPU
         CPU { registers: Registers::new(0), pc: 0, sp: 0, bus: MemoryBus::new(), is_halted: false }
     }
 
-    fn step(&mut self)
+    pub fn step(&mut self)
     {
         let mut instruction_byte = self.bus.read_byte(self.pc);
         let prefixed = instruction_byte == 0xCB;

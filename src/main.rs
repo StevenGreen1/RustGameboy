@@ -12,9 +12,23 @@ use winit::{
 
 use std::{thread, time::Duration};
 
+use std::fs::File;
+use std::io::Read;
+
+fn load_boot_rom(path: &str) -> std::io::Result<Vec<u8>>
+{
+    let mut file = File::open(path)?;
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer)?;
+    Ok(buffer)
+}
+
 fn main() -> Result<(), pixels::Error>
 {
-    let cpu = cpu::CPU::new();
+    let boot_rom = load_boot_rom("dmg_boot.bin").expect("Failed to load boot ROM");
+    println!("Boot ROM loaded, {} bytes", boot_rom.len());
+
+    let mut cpu = cpu::CPU::new();
 
     let event_loop = EventLoop::new().unwrap();
 
@@ -85,6 +99,10 @@ fn main() -> Result<(), pixels::Error>
 
             Event::AboutToWait =>
             {
+                for _ in 0..100
+                {
+                    cpu.step(); // or whatever your stepping function is
+                }
                 window.request_redraw();
             }
 
