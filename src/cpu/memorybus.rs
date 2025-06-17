@@ -3,6 +3,9 @@ use crate::gpu::VRAM_BEGIN;
 use crate::gpu::VRAM_END;
 //use crate::gpu::VRAM_SIZE;
 
+pub const BOOT_ROM_BEGIN: usize = 0x00;
+pub const BOOT_ROM_END: usize = 0xFF;
+pub const BOOT_ROM_SIZE: usize = BOOT_ROM_END - BOOT_ROM_BEGIN + 1;
 pub struct MemoryBus
 {
     memory: [u8; 0xFFFF],
@@ -11,9 +14,14 @@ pub struct MemoryBus
 
 impl MemoryBus
 {
-    pub fn new() -> Self
+    pub fn new(boot_rom: Vec<u8>) -> Self
     {
-        Self { memory: [0; 0xFFFF], gpu: GPU::new() }
+        let mut memory = [0; 0xFFFF];
+
+        let len = boot_rom.len().min(BOOT_ROM_END);
+        memory[..len].copy_from_slice(&boot_rom[..len]);
+
+        Self { memory, gpu: GPU::new() }
     }
 
     pub fn read_byte(&self, address: u16) -> u8

@@ -28,7 +28,7 @@ fn main() -> Result<(), pixels::Error>
     let boot_rom = load_boot_rom("dmg_boot.bin").expect("Failed to load boot ROM");
     println!("Boot ROM loaded, {} bytes", boot_rom.len());
 
-    let mut cpu = cpu::CPU::new();
+    let mut cpu = cpu::CPU::new(boot_rom);
 
     let event_loop = EventLoop::new().unwrap();
 

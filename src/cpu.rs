@@ -21,9 +21,15 @@ pub struct CPU
 
 impl CPU
 {
-    pub fn new() -> Self
+    pub fn new(boot_rom: Vec<u8>) -> Self
     {
-        CPU { registers: Registers::new(0), pc: 0, sp: 0, bus: MemoryBus::new(), is_halted: false }
+        CPU {
+            registers: Registers::new(0),
+            pc: 0,
+            sp: 0,
+            bus: MemoryBus::new(boot_rom),
+            is_halted: false,
+        }
     }
 
     pub fn step(&mut self)
