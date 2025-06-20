@@ -1,3 +1,4 @@
+#[derive(Copy, Clone)]
 pub enum ArithmeticTarget
 {
     A,
@@ -9,6 +10,7 @@ pub enum ArithmeticTarget
     L,
 }
 
+#[derive(Copy, Clone)]
 pub enum ArithmeticTarget16
 {
     BC,
@@ -16,6 +18,7 @@ pub enum ArithmeticTarget16
     HL,
 }
 
+#[derive(Copy, Clone)]
 pub enum StackTarget
 {
     BC,
@@ -23,6 +26,7 @@ pub enum StackTarget
     HL,
 }
 
+#[derive(Copy, Clone)]
 pub enum JumpTest
 {
     NotZero,
@@ -32,6 +36,7 @@ pub enum JumpTest
     Always,
 }
 
+#[derive(Copy, Clone)]
 pub enum LoadByteTarget
 {
     A,
@@ -44,6 +49,7 @@ pub enum LoadByteTarget
     HLI,
 }
 
+#[derive(Copy, Clone)]
 pub enum LoadByteSource
 {
     A,
@@ -57,14 +63,17 @@ pub enum LoadByteSource
     HLI,
 }
 
+#[derive(Copy, Clone)]
 pub enum LoadWordTarget
 {
     AF,
     BC,
     DE,
     HL,
+    SP,
 }
 
+#[derive(Copy, Clone)]
 pub enum Indirect
 {
     BCIndirect,
@@ -75,6 +84,7 @@ pub enum Indirect
     LastByteIndirect,
 }
 
+#[derive(Copy, Clone)]
 pub enum LoadType
 {
     Byte(LoadByteTarget, LoadByteSource),
@@ -115,17 +125,18 @@ pub enum Instruction
     RLCA(),
     RLC(ArithmeticTarget), // RLC r8
     CPL(),
-    BIT(u8, ArithmeticTarget), // BIT u3,r8
-    BIT16(u8),                 // BIT u3,[HL] - Possibly wrong as HL is address
-    RES(u8, ArithmeticTarget), // RES u3,r8
-    RES16(u8),                 // RES u3,[HL] - Possibly wrong as HL is address
-    SET(u8, ArithmeticTarget), // SET u3,r8
-    SET16(u8),                 // SET u3,[HL] - Possibly wrong as HL is address
-    SRL(ArithmeticTarget),     // SRL r8
-    SRA(ArithmeticTarget),     // SRA r8
-    SLA(ArithmeticTarget),     // SLA r8
-    SWAP(ArithmeticTarget),    // SWAP r8
-    JP(JumpTest),              // Jump instructions
+    BIT(u8, ArithmeticTarget),  // BIT u3,r8
+    BIT16(u8),                  // BIT u3,[HL] - Possibly wrong as HL is address
+    RES(u8, ArithmeticTarget),  // RES u3,r8
+    RES16(u8),                  // RES u3,[HL] - Possibly wrong as HL is address
+    SET(u8, ArithmeticTarget),  // SET u3,r8
+    SET16(u8),                  // SET u3,[HL] - Possibly wrong as HL is address
+    SRL(ArithmeticTarget),      // SRL r8
+    SRA(ArithmeticTarget),      // SRA r8
+    SLA(ArithmeticTarget),      // SLA r8
+    SWAP(ArithmeticTarget),     // SWAP r8
+    SWAP16(ArithmeticTarget16), // SWAP [HL]
+    JP(JumpTest),               // Jump instructions
 }
 
 impl Instruction
@@ -147,6 +158,15 @@ impl Instruction
         match byte
         {
             0x00 => Some(Instruction::RLC(ArithmeticTarget::B)), // RLC B
+            0x30 => Some(Instruction::SWAP(ArithmeticTarget::B)), // RLC B
+            0x31 => Some(Instruction::SWAP(ArithmeticTarget::C)), // RLC B
+            0x32 => Some(Instruction::SWAP(ArithmeticTarget::D)), // RLC B
+            0x33 => Some(Instruction::SWAP(ArithmeticTarget::E)), // RLC B
+            0x34 => Some(Instruction::SWAP(ArithmeticTarget::H)), // RLC B
+            0x35 => Some(Instruction::SWAP(ArithmeticTarget::L)), // RLC B
+            0x36 => Some(Instruction::SWAP16(ArithmeticTarget16::HL)), // RLC B
+            0x37 => Some(Instruction::SWAP(ArithmeticTarget::A)), // RLC B
+
             _ =>
             /* TODO: Add mapping for rest of instructions */
             {
@@ -161,6 +181,12 @@ impl Instruction
         {
             0x04 => Some(Instruction::INC(ArithmeticTarget::B)), // INC B
             0x14 => Some(Instruction::INC(ArithmeticTarget::D)), // INC D
+
+            0x01 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::BC))),
+            0x11 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::DE))),
+            0x21 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::HL))),
+            0x31 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::SP))),
+
             _ =>
             /* TODO: Add mapping for rest of instructions */
             {

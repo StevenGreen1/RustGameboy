@@ -35,6 +35,7 @@ impl CPU
     pub fn step(&mut self)
     {
         let mut instruction_byte = self.bus.read_byte(self.pc);
+        println!("instruction_byte = 0x{:x}", instruction_byte);
         let prefixed = instruction_byte == 0xCB;
         if prefixed
         {
@@ -98,6 +99,16 @@ impl CPU
             ArithmeticTarget16::BC => Some(self.registers.get_bc()),
             ArithmeticTarget16::DE => Some(self.registers.get_de()),
             ArithmeticTarget16::HL => Some(self.registers.get_hl()),
+        }
+    }
+
+    fn set_arithmetic_target_value16(&mut self, target: ArithmeticTarget16, value: u16)
+    {
+        match target
+        {
+            ArithmeticTarget16::BC => self.registers.set_bc(value),
+            ArithmeticTarget16::DE => self.registers.set_de(value),
+            ArithmeticTarget16::HL => self.registers.set_hl(value),
         }
     }
 
@@ -199,10 +210,6 @@ impl CPU
                         {
                             self.bus.write_byte(self.registers.get_hl(), source_value)
                         }
-                        _ =>
-                        {
-                            panic!("TODO: implement other targets")
-                        }
                     }
 
                     match source
@@ -220,6 +227,7 @@ impl CPU
                         LoadWordTarget::BC => self.registers.set_bc(word),
                         LoadWordTarget::DE => self.registers.set_de(word),
                         LoadWordTarget::HL => self.registers.set_hl(word),
+                        LoadWordTarget::SP => self.sp = word,
                         _ =>
                         {
                             panic!("TODO: implement other targets")
@@ -746,6 +754,26 @@ impl CPU
                     // Shift but preserve sign i.e. the 7th bit
                     let result = (initial << 4) & (initial >> 4);
                     *value = result;
+
+                    self.registers.f.zero = result == 0;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = false;
+                    self.registers.f.carry = false;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::SWAP16(target) =>
+            {
+                if let Some(value) = self.get_arithmetic_target_value16(target)
+                {
+                    let initial = value;
+                    // Shift but preserve sign i.e. the 7th bit
+                    let result = (initial << 4) & (initial >> 4);
+                    self.set_arithmetic_target_value16(target, result);
 
                     self.registers.f.zero = result == 0;
                     self.registers.f.subtract = false;
