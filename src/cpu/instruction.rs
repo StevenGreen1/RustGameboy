@@ -111,6 +111,8 @@ pub enum Instruction
     AND(ArithmeticTarget),
     OR(ArithmeticTarget),
     XOR(ArithmeticTarget),
+    XOR16(ArithmeticTarget16),
+    XORD8(),
     CP(ArithmeticTarget),
     INC(ArithmeticTarget),
     DEC(ArithmeticTarget),
@@ -186,6 +188,16 @@ impl Instruction
             0x11 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::DE))),
             0x21 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::HL))),
             0x31 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::SP))),
+
+            0xaf => Some(Instruction::XOR(ArithmeticTarget::A)),
+            0xa8 => Some(Instruction::XOR(ArithmeticTarget::B)),
+            0xa9 => Some(Instruction::XOR(ArithmeticTarget::C)),
+            0xaa => Some(Instruction::XOR(ArithmeticTarget::D)),
+            0xab => Some(Instruction::XOR(ArithmeticTarget::E)),
+            0xac => Some(Instruction::XOR(ArithmeticTarget::H)),
+            0xad => Some(Instruction::XOR(ArithmeticTarget::L)),
+            0xae => Some(Instruction::XOR16(ArithmeticTarget16::HL)),
+            0xee => Some(Instruction::XORD8()),
 
             _ =>
             /* TODO: Add mapping for rest of instructions */

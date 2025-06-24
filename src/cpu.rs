@@ -412,6 +412,27 @@ impl CPU
                 }
             }
 
+            Instruction::XOR16(target) =>
+            {
+                if let Some(address) = self.get_arithmetic_target_value16(target)
+                {
+                    let value = self.bus.read_byte(address);
+                    let result = self.xor(value);
+                    self.registers.a = result;
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::XORD8() =>
+            {
+                let value = self.read_next_byte();
+                let result = self.xor(value);
+                self.registers.a = result;
+            }
+
             Instruction::CP(target) =>
             {
                 if let Some(value) = self.get_arithmetic_target_value(target)
@@ -768,12 +789,13 @@ impl CPU
 
             Instruction::SWAP16(target) =>
             {
-                if let Some(value) = self.get_arithmetic_target_value16(target)
+                if let Some(address) = self.get_arithmetic_target_value16(target)
                 {
+                    let value = self.bus.read_byte(address);
                     let initial = value;
                     // Shift but preserve sign i.e. the 7th bit
                     let result = (initial << 4) & (initial >> 4);
-                    self.set_arithmetic_target_value16(target, result);
+                    self.bus.write_byte(address, result);
 
                     self.registers.f.zero = result == 0;
                     self.registers.f.subtract = false;
