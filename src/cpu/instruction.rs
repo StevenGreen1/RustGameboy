@@ -157,6 +157,7 @@ impl Instruction
 
     fn from_byte_prefixed(byte: u8) -> Option<Instruction>
     {
+        println!("from_byte_prefixed {:x}", byte);
         match byte
         {
             0x00 => Some(Instruction::RLC(ArithmeticTarget::B)), // RLC B
@@ -169,6 +170,15 @@ impl Instruction
             0x36 => Some(Instruction::SWAP16(ArithmeticTarget16::HL)), // RLC B
             0x37 => Some(Instruction::SWAP(ArithmeticTarget::A)), // RLC B
 
+            0x78 => Some(Instruction::BIT(7, ArithmeticTarget::B)),
+            0x79 => Some(Instruction::BIT(7, ArithmeticTarget::C)),
+            0x7a => Some(Instruction::BIT(7, ArithmeticTarget::D)),
+            0x7b => Some(Instruction::BIT(7, ArithmeticTarget::E)),
+            0x7c => Some(Instruction::BIT(7, ArithmeticTarget::H)),
+            0x7d => Some(Instruction::BIT(7, ArithmeticTarget::L)),
+            0x7e => Some(Instruction::BIT16(7)), // Only 16 bit target is HL, so no target here
+            0x7f => Some(Instruction::BIT(7, ArithmeticTarget::A)),
+
             _ =>
             /* TODO: Add mapping for rest of instructions */
             {
@@ -179,6 +189,7 @@ impl Instruction
 
     fn from_byte_not_prefixed(byte: u8) -> Option<Instruction>
     {
+        println!("from_byte_not_prefixed");
         match byte
         {
             0x04 => Some(Instruction::INC(ArithmeticTarget::B)), // INC B
@@ -189,6 +200,11 @@ impl Instruction
             0x21 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::HL))),
             0x31 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::SP))),
 
+            0x02 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::BCIndirect))),
+            0x12 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::DEIndirect))),
+            0x22 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::HLIndirectPlus))),
+            0x32 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::HLIndirectMinus))),
+
             0xaf => Some(Instruction::XOR(ArithmeticTarget::A)),
             0xa8 => Some(Instruction::XOR(ArithmeticTarget::B)),
             0xa9 => Some(Instruction::XOR(ArithmeticTarget::C)),
@@ -198,6 +214,15 @@ impl Instruction
             0xad => Some(Instruction::XOR(ArithmeticTarget::L)),
             0xae => Some(Instruction::XOR16(ArithmeticTarget16::HL)),
             0xee => Some(Instruction::XORD8()),
+
+            0x78 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::B))),
+            0x79 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::C))),
+            0x7a => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::D))),
+            0x7b => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::E))),
+            0x7c => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::H))),
+            0x7d => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::L))),
+            0x7e => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLI))),
+            0x7f => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::A))),
 
             _ =>
             /* TODO: Add mapping for rest of instructions */

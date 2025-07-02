@@ -40,6 +40,8 @@ impl CPU
         if prefixed
         {
             instruction_byte = self.bus.read_byte(self.pc + 1);
+            // Skip the next pc as it is read here
+            self.pc += 1;
         }
 
         let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte, prefixed)
