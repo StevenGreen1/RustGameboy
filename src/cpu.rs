@@ -17,6 +17,7 @@ pub struct CPU
     pub sp: u16,
     pub bus: MemoryBus,
     is_halted: bool,
+    inst_count: u16,
 }
 
 impl CPU
@@ -29,13 +30,17 @@ impl CPU
             sp: 0,
             bus: MemoryBus::new(boot_rom),
             is_halted: false,
+            inst_count: 0,
         }
     }
 
     pub fn step(&mut self)
     {
         let mut instruction_byte = self.bus.read_byte(self.pc);
-        println!("instruction_byte = 0x{:x}", instruction_byte);
+        println!(
+            "instruction_byte = 0x{:x}, instruction count {}",
+            instruction_byte, self.inst_count
+        );
         let prefixed = instruction_byte == 0xCB;
         if prefixed
         {
@@ -54,6 +59,10 @@ impl CPU
                 format!("0x{}{:x}", if prefixed { "cb" } else { "" }, instruction_byte);
             panic!("Unkown instruction found for: {}", description)
         };
+        self.inst_count = self.inst_count.wrapping_add(1);
+
+        println!("The current pc is {}", self.pc);
+        println!("The next pc is {}", next_pc);
 
         // To implement
         //if self.bus.has_interrupt()
@@ -822,6 +831,19 @@ impl CPU
                 };
                 return self.jump(jump_condition);
             }
+
+            Instruction::JR(test) =>
+            {
+                let jump_condition = match test
+                {
+                    JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Always => true,
+                };
+                return self.jump_relative(jump_condition);
+            }
         }
 
         return self.pc.wrapping_add(pc_increment);
@@ -934,6 +956,28 @@ impl CPU
             // counter forward by 3 since the jump instruction is
             // 3 bytes wide (1 byte for tag and 2 bytes for jump address)
             self.pc.wrapping_add(3)
+        }
+    }
+
+    fn jump_relative(&mut self, should_jump: bool) -> u16
+    {
+        let next_step = self.pc.wrapping_add(2);
+        if should_jump
+        {
+            let offset = self.read_next_byte() as i8;
+            let pc = if offset >= 0
+            {
+                next_step.wrapping_add(offset as u16)
+            }
+            else
+            {
+                next_step.wrapping_sub(offset.abs() as u16)
+            };
+            pc
+        }
+        else
+        {
+            next_step
         }
     }
 

@@ -138,7 +138,8 @@ pub enum Instruction
     SLA(ArithmeticTarget),      // SLA r8
     SWAP(ArithmeticTarget),     // SWAP r8
     SWAP16(ArithmeticTarget16), // SWAP [HL]
-    JP(JumpTest),               // Jump instructions
+    JP(JumpTest),               // Absolute jump instructions
+    JR(JumpTest),               // Relative jump instructions
 }
 
 impl Instruction
@@ -192,8 +193,10 @@ impl Instruction
         println!("from_byte_not_prefixed");
         match byte
         {
-            0x04 => Some(Instruction::INC(ArithmeticTarget::B)), // INC B
-            0x14 => Some(Instruction::INC(ArithmeticTarget::D)), // INC D
+            0x00 => Some(Instruction::NOP()),
+
+            0x04 => Some(Instruction::INC(ArithmeticTarget::B)),
+            0x14 => Some(Instruction::INC(ArithmeticTarget::D)),
 
             0x01 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::BC))),
             0x11 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::DE))),
@@ -204,6 +207,12 @@ impl Instruction
             0x12 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::DEIndirect))),
             0x22 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::HLIndirectPlus))),
             0x32 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::HLIndirectMinus))),
+
+            0x18 => Some(Instruction::JR(JumpTest::Always)),
+            0x20 => Some(Instruction::JR(JumpTest::NotZero)),
+            0x30 => Some(Instruction::JR(JumpTest::NotCarry)),
+            0x28 => Some(Instruction::JR(JumpTest::Zero)),
+            0x38 => Some(Instruction::JR(JumpTest::Carry)),
 
             0xaf => Some(Instruction::XOR(ArithmeticTarget::A)),
             0xa8 => Some(Instruction::XOR(ArithmeticTarget::B)),
