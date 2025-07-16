@@ -9,7 +9,7 @@ pub const BOOT_ROM_SIZE: usize = BOOT_ROM_END - BOOT_ROM_BEGIN + 1;
 pub struct MemoryBus
 {
     memory: [u8; 0xFFFF],
-    gpu: GPU,
+    pub gpu: GPU,
 }
 
 impl MemoryBus

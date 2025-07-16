@@ -32,7 +32,7 @@ fn main() -> Result<(), pixels::Error>
 
     let event_loop = EventLoop::new().unwrap();
 
-    let window_size = PhysicalSize::new(320, 240);
+    let window_size = PhysicalSize::new(240, 180);
     let window = WindowBuilder::new()
         .with_title("Checkerboard")
         .with_inner_size(window_size)
@@ -40,7 +40,7 @@ fn main() -> Result<(), pixels::Error>
         .unwrap();
 
     let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-    let mut pixels = Pixels::new(window_size.width, window_size.height, surface_texture)?;
+    let mut pixels: Pixels = Pixels::new(window_size.width, window_size.height, surface_texture)?;
 
     let _ = event_loop.run(move |event, event_loop_target| {
         event_loop_target.set_control_flow(ControlFlow::Poll);
@@ -62,31 +62,19 @@ fn main() -> Result<(), pixels::Error>
                         {
                             event_loop_target.exit();
                         }
-                        if let winit::keyboard::Key::Named(NamedKey::Shift) = event.logical_key
+                        /*if let winit::keyboard::Key::Named(NamedKey::Shift) = event.logical_key
                         {
-                            draw_checkerboard(
-                                pixels.frame_mut(),
-                                window_size.width,
-                                window_size.height,
-                                true,
-                            );
-                            if pixels.render().is_err()
-                            {
-                                event_loop_target.exit();
-                            }
                             thread::sleep(Duration::from_millis(500));
-                        }
+                        }*/
                     }
                 }
 
                 WindowEvent::RedrawRequested =>
                 {
-                    draw_checkerboard(
-                        pixels.frame_mut(),
-                        window_size.width,
-                        window_size.height,
-                        false,
-                    );
+                    let vram = cpu.bus.gpu.vram;
+                    render_tileset(&vram, pixels.frame_mut(), window_size.width as usize);
+                    //thread::sleep(Duration::from_millis(10));
+
                     if pixels.render().is_err()
                     {
                         event_loop_target.exit();
@@ -113,29 +101,72 @@ fn main() -> Result<(), pixels::Error>
     Ok(())
 }
 
-fn draw_checkerboard(frame: &mut [u8], width: u32, height: u32, flip: bool)
+const TILE_WIDTH: usize = 8;
+const TILE_HEIGHT: usize = 8;
+const TILE_BYTES: usize = 16;
+const TILE_COUNT: usize = 384;
+const TILES_PER_ROW: usize = 24;
+const TILESET_ROWS: usize = TILE_COUNT / TILES_PER_ROW; // 16
+
+/// Decode a single tile
+fn decode_tile(tile_data: &[u8]) -> [[u8; 8]; 8]
 {
-    let square_size = 20;
+    let mut tile = [[0u8; 8]; 8];
 
-    for y in 0..height
+    for y in 0..8
     {
-        for x in 0..width
+        let low = tile_data[y * 2];
+        let high = tile_data[y * 2 + 1];
+
+        for x in 0..8
         {
-            let mut is_dark = (x / square_size + y / square_size) % 2 == 0;
-            if flip
-            {
-                is_dark = !is_dark;
-            }
+            let bit = 1 << (7 - x);
+            let lo_bit = (low & bit) >> (7 - x);
+            let hi_bit = (high & bit) >> (7 - x);
+            tile[y][x] = (hi_bit << 1) | lo_bit;
+        }
+    }
 
-            let i = ((y * width + x) * 4) as usize;
+    tile
+}
 
-            if is_dark
+/// Convert pixel value to RGBA
+fn pixel_value_to_rgba(value: u8) -> [u8; 4]
+{
+    match value
+    {
+        0 => [255, 255, 255, 255],
+        1 => [192, 192, 192, 255],
+        2 => [96, 96, 96, 255],
+        3 => [0, 0, 0, 255],
+        _ => [255, 0, 255, 255], // Error color
+    }
+}
+
+/// Render all tiles to the frame buffer
+fn render_tileset(vram: &[u8], frame: &mut [u8], frame_width: usize)
+{
+    for tile_index in 0..TILE_COUNT
+    {
+        let tile_x = tile_index % TILES_PER_ROW;
+        let tile_y = tile_index / TILES_PER_ROW;
+
+        let tile_base = tile_index * TILE_BYTES;
+        let tile_data = &vram[tile_base..tile_base + TILE_BYTES];
+        let tile = decode_tile(tile_data);
+
+        for y in 0..TILE_HEIGHT
+        {
+            for x in 0..TILE_WIDTH
             {
-                frame[i..i + 4].copy_from_slice(&[0x40, 0x40, 0x40, 0xff]); // dark square
-            }
-            else
-            {
-                frame[i..i + 4].copy_from_slice(&[0xc0, 0xc0, 0xc0, 0xff]); // light square
+                let color = pixel_value_to_rgba(tile[y][x]);
+
+                let screen_x = tile_x * TILE_WIDTH + x;
+                let screen_y = tile_y * TILE_HEIGHT + y;
+
+                let i = (screen_y * frame_width + screen_x) * 4;
+
+                frame[i..i + 4].copy_from_slice(&color);
             }
         }
     }

@@ -20,7 +20,7 @@ fn empty_tile() -> Tile
 
 pub struct GPU
 {
-    vram: [u8; VRAM_SIZE],
+    pub vram: [u8; VRAM_SIZE],
     tile_set: [Tile; 384],
 }
 
