@@ -1,4 +1,6 @@
 mod registers;
+use pixels::wgpu::TextureSampleType;
+
 use crate::cpu::registers::Registers;
 
 mod memorybus;
@@ -6,8 +8,8 @@ use crate::cpu::memorybus::MemoryBus;
 
 mod instruction;
 use crate::cpu::instruction::{
-    ArithmeticTarget, ArithmeticTarget16, Indirect, Instruction, JumpTest, LoadByteSource,
-    LoadByteTarget, LoadType, LoadWordTarget, StackTarget,
+    ArithmeticTarget, ArithmeticTarget16, Inc16Target, Indirect, Instruction, JumpTest,
+    LoadByteSource, LoadByteTarget, LoadType, LoadWordTarget, StackTarget,
 };
 
 pub struct CPU
@@ -472,6 +474,50 @@ impl CPU
                 {
                     // TODO: support more targets
                 }
+            }
+
+            Instruction::INC16(target) =>
+            {
+                let mut result = 0;
+                let mut initial = 0;
+
+                match target
+                {
+                    Inc16Target::BC =>
+                    {
+                        initial = self.registers.get_bc();
+                        result = initial + 1;
+                        self.registers.set_bc(result);
+                    }
+                    Inc16Target::DE =>
+                    {
+                        initial = self.registers.get_de();
+                        result = initial + 1;
+                        self.registers.set_de(result);
+                    }
+                    Inc16Target::HL =>
+                    {
+                        initial = self.registers.get_hl();
+                        result = initial + 1;
+                        self.registers.set_hl(result);
+                    }
+                    Inc16Target::HLI =>
+                    {
+                        initial = self.bus.read_byte(self.registers.get_hl()) as u16;
+                        result = initial + 1;
+                        self.bus.write_byte(self.registers.get_hl(), result as u8);
+                    }
+                    Inc16Target::SP =>
+                    {
+                        initial = self.bus.read_byte(self.sp) as u16;
+                        result = initial + 1;
+                        self.bus.write_byte(self.sp, result as u8);
+                    }
+                }
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = false;
+                self.registers.f.half_carry = (initial & 0xF) + 1 > 0xF;
             }
 
             Instruction::DEC(target) =>

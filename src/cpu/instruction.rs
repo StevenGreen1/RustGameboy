@@ -19,6 +19,16 @@ pub enum ArithmeticTarget16
 }
 
 #[derive(Copy, Clone)]
+pub enum Inc16Target
+{
+    BC,
+    DE,
+    HL,
+    HLI,
+    SP,
+}
+
+#[derive(Copy, Clone)]
 pub enum StackTarget
 {
     BC,
@@ -115,6 +125,7 @@ pub enum Instruction
     XORD8(),
     CP(ArithmeticTarget),
     INC(ArithmeticTarget),
+    INC16(Inc16Target),
     DEC(ArithmeticTarget),
     CCF(),
     SCF(),
@@ -195,9 +206,6 @@ impl Instruction
         {
             0x00 => Some(Instruction::NOP()),
 
-            0x04 => Some(Instruction::INC(ArithmeticTarget::B)),
-            0x14 => Some(Instruction::INC(ArithmeticTarget::D)),
-
             0x01 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::BC))),
             0x11 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::DE))),
             0x21 => Some(Instruction::LD(LoadType::Word(LoadWordTarget::HL))),
@@ -207,6 +215,15 @@ impl Instruction
             0x12 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::DEIndirect))),
             0x22 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::HLIndirectPlus))),
             0x32 => Some(Instruction::LD(LoadType::IndirectFromA(Indirect::HLIndirectMinus))),
+
+            0x06 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::B, LoadByteSource::D8))),
+            0x0e => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::C, LoadByteSource::D8))),
+            0x16 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::D, LoadByteSource::D8))),
+            0x1e => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::E, LoadByteSource::D8))),
+            0x26 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::H, LoadByteSource::D8))),
+            0x2e => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::L, LoadByteSource::D8))),
+            0x36 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::HLI, LoadByteSource::D8))),
+            0x3e => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::D8))),
 
             0x18 => Some(Instruction::JR(JumpTest::Always)),
             0x20 => Some(Instruction::JR(JumpTest::NotZero)),
@@ -232,6 +249,26 @@ impl Instruction
             0x7d => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::L))),
             0x7e => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLI))),
             0x7f => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::A))),
+
+            0xe2 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::LastByteIndirect))),
+            0x02 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::BCIndirect))),
+            0x12 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::DEIndirect))),
+            0x22 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::HLIndirectPlus))),
+            0x32 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::HLIndirectMinus))),
+            0xea => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::WordIndirect))),
+
+            0x3c => Some(Instruction::INC(ArithmeticTarget::A)),
+            0x04 => Some(Instruction::INC(ArithmeticTarget::B)),
+            0x14 => Some(Instruction::INC(ArithmeticTarget::D)),
+            0x24 => Some(Instruction::INC(ArithmeticTarget::H)),
+            0x0c => Some(Instruction::INC(ArithmeticTarget::C)),
+            0x1c => Some(Instruction::INC(ArithmeticTarget::E)),
+            0x2c => Some(Instruction::INC(ArithmeticTarget::L)),
+            0x34 => Some(Instruction::INC16(Inc16Target::HL)),
+            0x03 => Some(Instruction::INC16(Inc16Target::BC)),
+            0x13 => Some(Instruction::INC16(Inc16Target::DE)),
+            0x23 => Some(Instruction::INC16(Inc16Target::HL)),
+            0x33 => Some(Instruction::INC16(Inc16Target::SP)),
 
             _ =>
             /* TODO: Add mapping for rest of instructions */
