@@ -328,6 +328,31 @@ impl CPU
                     self.bus.write_byte(0xFF00 + offset, self.registers.a);
                     pc_increment = 2
                 }
+                LoadType::SPFromHL() =>
+                {
+                    self.sp = self.registers.get_hl();
+                }
+                LoadType::HLFromSPN() =>
+                {
+                    let value = self.read_next_byte() as i8 as i16 as u16;
+                    let result = self.sp.wrapping_add(value);
+                    self.registers.set_hl(result);
+                    self.registers.f.zero = false;
+                    self.registers.f.subtract = false;
+                    // Half and whole carry are computed at the nibble and byte level instead
+                    // of the byte and word level like you might expect for 16 bit values
+                    self.registers.f.half_carry = (self.sp & 0xF) + (value & 0xF) > 0xF;
+                    self.registers.f.carry = (self.sp & 0xFF) + (value & 0xFF) > 0xFF;
+                    pc_increment = 2;
+                }
+                LoadType::IndirectFromSP() =>
+                {
+                    let address = self.read_next_word();
+                    let sp = self.sp;
+                    self.bus.write_byte(address, (sp & 0xFF) as u8);
+                    self.bus.write_byte(address.wrapping_add(1), ((sp & 0xFF00) >> 8) as u8);
+                    pc_increment = 3;
+                }
                 _ =>
                 {
                     panic!("TODO: implement other load types")

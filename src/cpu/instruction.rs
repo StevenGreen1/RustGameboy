@@ -103,6 +103,9 @@ pub enum LoadType
     IndirectFromA(Indirect),
     AFromByteAddress(),
     ByteAddressFromA(),
+    SPFromHL(),
+    HLFromSPN(),
+    IndirectFromSP(),
 }
 
 pub enum Instruction
@@ -241,6 +244,14 @@ impl Instruction
             0xae => Some(Instruction::XOR16(ArithmeticTarget16::HL)),
             0xee => Some(Instruction::XORD8()),
 
+            0x70 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::HLI, LoadByteSource::B))),
+            0x71 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::HLI, LoadByteSource::C))),
+            0x72 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::HLI, LoadByteSource::D))),
+            0x73 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::HLI, LoadByteSource::E))),
+            0x74 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::HLI, LoadByteSource::H))),
+            0x75 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::HLI, LoadByteSource::L))),
+            0x77 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::HLI, LoadByteSource::A))),
+
             0x78 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::B))),
             0x79 => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::C))),
             0x7a => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::D))),
@@ -249,6 +260,13 @@ impl Instruction
             0x7d => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::L))),
             0x7e => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::HLI))),
             0x7f => Some(Instruction::LD(LoadType::Byte(LoadByteTarget::A, LoadByteSource::A))),
+
+            0xe0 => Some(Instruction::LD(LoadType::ByteAddressFromA())),
+            0xf0 => Some(Instruction::LD(LoadType::AFromByteAddress())),
+
+            0x08 => Some(Instruction::LD(LoadType::IndirectFromSP())),
+            0xf9 => Some(Instruction::LD(LoadType::SPFromHL())),
+            0xf8 => Some(Instruction::LD(LoadType::HLFromSPN())),
 
             0xe2 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::LastByteIndirect))),
             0x02 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::BCIndirect))),
