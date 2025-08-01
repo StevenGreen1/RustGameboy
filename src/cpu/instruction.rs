@@ -19,7 +19,7 @@ pub enum ArithmeticTarget16
 }
 
 #[derive(Copy, Clone)]
-pub enum Inc16Target
+pub enum IncDec16Target
 {
     BC,
     DE,
@@ -31,6 +31,7 @@ pub enum Inc16Target
 #[derive(Copy, Clone)]
 pub enum StackTarget
 {
+    AF,
     BC,
     DE,
     HL,
@@ -95,6 +96,14 @@ pub enum Indirect
 }
 
 #[derive(Copy, Clone)]
+pub enum ADDHLTarget
+{
+    BC,
+    DE,
+    HL,
+    SP,
+}
+#[derive(Copy, Clone)]
 pub enum LoadType
 {
     Byte(LoadByteTarget, LoadByteSource),
@@ -108,17 +117,50 @@ pub enum LoadType
     IndirectFromSP(),
 }
 
+pub enum RSTLocation
+{
+    X00,
+    X08,
+    X10,
+    X18,
+    X20,
+    X28,
+    X30,
+    X38,
+}
+
+impl RSTLocation
+{
+    pub fn to_hex(&self) -> u16
+    {
+        match self
+        {
+            RSTLocation::X00 => 0x00,
+            RSTLocation::X08 => 0x08,
+            RSTLocation::X10 => 0x10,
+            RSTLocation::X18 => 0x18,
+            RSTLocation::X20 => 0x20,
+            RSTLocation::X28 => 0x28,
+            RSTLocation::X30 => 0x30,
+            RSTLocation::X38 => 0x38,
+        }
+    }
+}
+
 pub enum Instruction
 {
     NOP(),
     HALT(),
     CALL(JumpTest),
-    RETURN(JumpTest),
+    RET(JumpTest),
+    RETI(),
     PUSH(StackTarget),
     POP(StackTarget),
     LD(LoadType),
     ADD(ArithmeticTarget),
-    ADDHL(ArithmeticTarget16),
+    ADD16(ArithmeticTarget16),
+    ADDD8(),
+    ADDHL(ADDHLTarget),
     SUB(ArithmeticTarget),
     SBC(ArithmeticTarget),
     AND(ArithmeticTarget),
@@ -127,9 +169,12 @@ pub enum Instruction
     XOR16(ArithmeticTarget16),
     XORD8(),
     CP(ArithmeticTarget),
+    CP16(ArithmeticTarget16),
+    CPD8(),
     INC(ArithmeticTarget),
-    INC16(Inc16Target),
+    INC16(IncDec16Target),
     DEC(ArithmeticTarget),
+    DEC16(IncDec16Target),
     CCF(),
     SCF(),
     RRA(),
@@ -154,6 +199,7 @@ pub enum Instruction
     SWAP16(ArithmeticTarget16), // SWAP [HL]
     JP(JumpTest),               // Absolute jump instructions
     JR(JumpTest),               // Relative jump instructions
+    RST(RSTLocation),
 }
 
 impl Instruction
@@ -268,6 +314,76 @@ impl Instruction
             0xf9 => Some(Instruction::LD(LoadType::SPFromHL())),
             0xf8 => Some(Instruction::LD(LoadType::HLFromSPN())),
 
+            0xc5 => Some(Instruction::PUSH(StackTarget::BC)),
+            0xd5 => Some(Instruction::PUSH(StackTarget::DE)),
+            0xe5 => Some(Instruction::PUSH(StackTarget::HL)),
+            0xf5 => Some(Instruction::PUSH(StackTarget::AF)),
+
+            0xc1 => Some(Instruction::POP(StackTarget::BC)),
+            0xd1 => Some(Instruction::POP(StackTarget::DE)),
+            0xe1 => Some(Instruction::POP(StackTarget::HL)),
+            0xf1 => Some(Instruction::POP(StackTarget::AF)),
+
+            0xc4 => Some(Instruction::CALL(JumpTest::NotZero)),
+            0xd4 => Some(Instruction::CALL(JumpTest::NotCarry)),
+            0xcc => Some(Instruction::CALL(JumpTest::Zero)),
+            0xdc => Some(Instruction::CALL(JumpTest::Carry)),
+            0xcd => Some(Instruction::CALL(JumpTest::Always)),
+
+            0xbf => Some(Instruction::CP(ArithmeticTarget::A)),
+            0xb8 => Some(Instruction::CP(ArithmeticTarget::B)),
+            0xb9 => Some(Instruction::CP(ArithmeticTarget::C)),
+            0xba => Some(Instruction::CP(ArithmeticTarget::D)),
+            0xbb => Some(Instruction::CP(ArithmeticTarget::E)),
+            0xbc => Some(Instruction::CP(ArithmeticTarget::H)),
+            0xbd => Some(Instruction::CP(ArithmeticTarget::L)),
+            0xbe => Some(Instruction::CP16(ArithmeticTarget16::HL)),
+            0xfe => Some(Instruction::CPD8()),
+
+            0xf2 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::LastByteIndirect))),
+            0x0a => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::BCIndirect))),
+            0x1a => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::DEIndirect))),
+            0x2a => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::HLIndirectPlus))),
+            0x3a => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::HLIndirectMinus))),
+            0xfa => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::WordIndirect))),
+
+            0xc4 => Some(Instruction::CALL(JumpTest::NotZero)),
+            0xd4 => Some(Instruction::CALL(JumpTest::NotCarry)),
+            0xcc => Some(Instruction::CALL(JumpTest::Zero)),
+            0xdc => Some(Instruction::CALL(JumpTest::Carry)),
+            0xcd => Some(Instruction::CALL(JumpTest::Always)),
+
+            0xc0 => Some(Instruction::RET(JumpTest::NotZero)),
+            0xd0 => Some(Instruction::RET(JumpTest::NotCarry)),
+            0xc8 => Some(Instruction::RET(JumpTest::Zero)),
+            0xd8 => Some(Instruction::RET(JumpTest::Carry)),
+            0xc9 => Some(Instruction::RET(JumpTest::Always)),
+            0xd9 => Some(Instruction::RETI()),
+
+            0xc7 => Some(Instruction::RST(RSTLocation::X00)),
+            0xd7 => Some(Instruction::RST(RSTLocation::X10)),
+            0xe7 => Some(Instruction::RST(RSTLocation::X20)),
+            0xf7 => Some(Instruction::RST(RSTLocation::X30)),
+            0xcf => Some(Instruction::RST(RSTLocation::X08)),
+            0xdf => Some(Instruction::RST(RSTLocation::X18)),
+            0xef => Some(Instruction::RST(RSTLocation::X28)),
+            0xff => Some(Instruction::RST(RSTLocation::X38)),
+
+            0x87 => Some(Instruction::ADD(ArithmeticTarget::A)),
+            0x80 => Some(Instruction::ADD(ArithmeticTarget::B)),
+            0x81 => Some(Instruction::ADD(ArithmeticTarget::C)),
+            0x82 => Some(Instruction::ADD(ArithmeticTarget::D)),
+            0x83 => Some(Instruction::ADD(ArithmeticTarget::E)),
+            0x84 => Some(Instruction::ADD(ArithmeticTarget::H)),
+            0x85 => Some(Instruction::ADD(ArithmeticTarget::L)),
+            0x86 => Some(Instruction::ADD16(ArithmeticTarget16::HL)),
+            0xc6 => Some(Instruction::ADDD8()),
+
+            0x09 => Some(Instruction::ADDHL(ADDHLTarget::BC)),
+            0x19 => Some(Instruction::ADDHL(ADDHLTarget::DE)),
+            0x29 => Some(Instruction::ADDHL(ADDHLTarget::HL)),
+            0x39 => Some(Instruction::ADDHL(ADDHLTarget::SP)),
+
             0xe2 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::LastByteIndirect))),
             0x02 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::BCIndirect))),
             0x12 => Some(Instruction::LD(LoadType::AFromIndirect(Indirect::DEIndirect))),
@@ -282,11 +398,24 @@ impl Instruction
             0x0c => Some(Instruction::INC(ArithmeticTarget::C)),
             0x1c => Some(Instruction::INC(ArithmeticTarget::E)),
             0x2c => Some(Instruction::INC(ArithmeticTarget::L)),
-            0x34 => Some(Instruction::INC16(Inc16Target::HL)),
-            0x03 => Some(Instruction::INC16(Inc16Target::BC)),
-            0x13 => Some(Instruction::INC16(Inc16Target::DE)),
-            0x23 => Some(Instruction::INC16(Inc16Target::HL)),
-            0x33 => Some(Instruction::INC16(Inc16Target::SP)),
+            0x34 => Some(Instruction::INC16(IncDec16Target::HL)),
+            0x03 => Some(Instruction::INC16(IncDec16Target::BC)),
+            0x13 => Some(Instruction::INC16(IncDec16Target::DE)),
+            0x23 => Some(Instruction::INC16(IncDec16Target::HL)),
+            0x33 => Some(Instruction::INC16(IncDec16Target::SP)),
+
+            0x3d => Some(Instruction::DEC(ArithmeticTarget::A)),
+            0x05 => Some(Instruction::DEC(ArithmeticTarget::B)),
+            0x0d => Some(Instruction::DEC(ArithmeticTarget::C)),
+            0x15 => Some(Instruction::DEC(ArithmeticTarget::D)),
+            0x1d => Some(Instruction::DEC(ArithmeticTarget::E)),
+            0x25 => Some(Instruction::DEC(ArithmeticTarget::H)),
+            0x2d => Some(Instruction::DEC(ArithmeticTarget::L)),
+            0x35 => Some(Instruction::DEC16(IncDec16Target::HL)),
+            0x0b => Some(Instruction::DEC16(IncDec16Target::BC)),
+            0x1b => Some(Instruction::DEC16(IncDec16Target::DE)),
+            0x2b => Some(Instruction::DEC16(IncDec16Target::HL)),
+            0x3b => Some(Instruction::DEC16(IncDec16Target::SP)),
 
             _ =>
             /* TODO: Add mapping for rest of instructions */

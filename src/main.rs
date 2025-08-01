@@ -3,7 +3,7 @@ pub mod gpu;
 
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
-    dpi::PhysicalSize,
+    dpi::{LogicalSize, PhysicalSize},
     event::{ElementState, Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     keyboard::NamedKey,
@@ -32,15 +32,19 @@ fn main() -> Result<(), pixels::Error>
 
     let event_loop = EventLoop::new().unwrap();
 
-    let window_size = PhysicalSize::new(240, 180);
+    let scale = 4;
+    let logical_width = 160.0 * scale as f64;
+    let logical_height = 144.0 * scale as f64;
+
     let window = WindowBuilder::new()
-        .with_title("Checkerboard")
-        .with_inner_size(window_size)
+        .with_title("Game Boy Emulator")
+        .with_inner_size(LogicalSize::new(logical_width, logical_height))
         .build(&event_loop)
         .unwrap();
 
+    let window_size = window.inner_size(); // This is a PhysicalSize<u32>
     let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-    let mut pixels: Pixels = Pixels::new(window_size.width, window_size.height, surface_texture)?;
+    let mut pixels: Pixels = Pixels::new(160, 144, surface_texture)?;
 
     let _ = event_loop.run(move |event, event_loop_target| {
         event_loop_target.set_control_flow(ControlFlow::Poll);
@@ -72,7 +76,7 @@ fn main() -> Result<(), pixels::Error>
                 WindowEvent::RedrawRequested =>
                 {
                     let vram = cpu.bus.gpu.vram;
-                    render_tileset(&vram, pixels.frame_mut(), window_size.width as usize);
+                    render_tileset(&vram, pixels.frame_mut(), 160 as usize);
                     //thread::sleep(Duration::from_millis(10));
 
                     if pixels.render().is_err()
@@ -161,6 +165,7 @@ fn render_tileset(vram: &[u8], frame: &mut [u8], frame_width: usize)
             {
                 let color = pixel_value_to_rgba(tile[y][x]);
 
+                //println!("Color {} {} {} {}", color[0], color[1], color[2], color[3]);
                 let screen_x = tile_x * TILE_WIDTH + x;
                 let screen_y = tile_y * TILE_HEIGHT + y;
 

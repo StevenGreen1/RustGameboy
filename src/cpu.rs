@@ -8,8 +8,8 @@ use crate::cpu::memorybus::MemoryBus;
 
 mod instruction;
 use crate::cpu::instruction::{
-    ArithmeticTarget, ArithmeticTarget16, Inc16Target, Indirect, Instruction, JumpTest,
-    LoadByteSource, LoadByteTarget, LoadType, LoadWordTarget, StackTarget,
+    ADDHLTarget, ArithmeticTarget, ArithmeticTarget16, IncDec16Target, Indirect, Instruction,
+    JumpTest, LoadByteSource, LoadByteTarget, LoadType, LoadWordTarget, StackTarget,
 };
 
 pub struct CPU
@@ -20,6 +20,7 @@ pub struct CPU
     pub bus: MemoryBus,
     is_halted: bool,
     inst_count: u16,
+    interrupts_enabled: bool,
 }
 
 impl CPU
@@ -33,6 +34,7 @@ impl CPU
             bus: MemoryBus::new(boot_rom),
             is_halted: false,
             inst_count: 0,
+            interrupts_enabled: true,
         }
     }
 
@@ -40,8 +42,8 @@ impl CPU
     {
         let mut instruction_byte = self.bus.read_byte(self.pc);
         println!(
-            "instruction_byte = 0x{:x}, instruction count {}",
-            instruction_byte, self.inst_count
+            "instruction_byte = 0x{:x}, instruction count {}, pc {}",
+            instruction_byte, self.inst_count, self.pc
         );
         let prefixed = instruction_byte == 0xCB;
         if prefixed
@@ -63,8 +65,8 @@ impl CPU
         };
         self.inst_count = self.inst_count.wrapping_add(1);
 
-        println!("The current pc is {}", self.pc);
-        println!("The next pc is {}", next_pc);
+        //println!("The current pc is {}", self.pc);
+        //println!("The next pc is {}", next_pc);
 
         // To implement
         //if self.bus.has_interrupt()
@@ -74,6 +76,26 @@ impl CPU
         if !self.is_halted
         {
             self.pc = next_pc;
+        }
+
+        let mut interrupted = false;
+        if self.interrupts_enabled
+        {
+            //if self.bus.interrupt_enable.vblank && self.bus.interrupt_flag.vblank {
+            //    interrupted = true;
+            //    self.bus.interrupt_flag.vblank = false;
+            //    self.interrupt(VBLANK_VECTOR)
+            //}
+            //if self.bus.interrupt_enable.lcdstat && self.bus.interrupt_flag.lcdstat {
+            //    interrupted = true;
+            //    self.bus.interrupt_flag.lcdstat = false;
+            //    self.interrupt(LCDSTAT_VECTOR)
+            //}
+            //if self.bus.interrupt_enable.timer && self.bus.interrupt_flag.timer {
+            //    interrupted = true;
+            //    self.bus.interrupt_flag.timer = false;
+            //    self.interrupt(TIMER_VECTOR)
+            //}
         }
     }
 
@@ -142,6 +164,10 @@ impl CPU
                 let jump_condition = match test
                 {
                     JumpTest::NotZero => !self.registers.f.zero,
+                    JumpTest::NotCarry => !self.registers.f.carry,
+                    JumpTest::Zero => self.registers.f.zero,
+                    JumpTest::Carry => self.registers.f.carry,
+                    JumpTest::Always => true,
                     _ =>
                     {
                         panic!("TODO: support more conditions")
@@ -149,7 +175,16 @@ impl CPU
                 };
                 self.call(jump_condition);
             }
-            Instruction::RETURN(test) =>
+            Instruction::RETI() =>
+            {
+                self.interrupts_enabled = true;
+                self.pop();
+            }
+            Instruction::RST(location) =>
+            {
+                return location.to_hex();
+            }
+            Instruction::RET(test) =>
             {
                 let jump_condition = match test
                 {
@@ -159,12 +194,13 @@ impl CPU
                         panic!("TODO: support more conditions")
                     }
                 };
-                self.return_(jump_condition);
+                return self.return_(jump_condition);
             }
             Instruction::PUSH(source) =>
             {
                 let value = match source
                 {
+                    StackTarget::AF => self.registers.get_af(),
                     StackTarget::BC => self.registers.get_bc(),
                     StackTarget::DE => self.registers.get_de(),
                     StackTarget::HL => self.registers.get_hl(),
@@ -180,6 +216,7 @@ impl CPU
                 let result = self.pop();
                 match target
                 {
+                    StackTarget::AF => self.registers.set_af(result),
                     StackTarget::BC => self.registers.set_bc(result),
                     StackTarget::DE => self.registers.set_de(result),
                     StackTarget::HL => self.registers.set_hl(result),
@@ -372,17 +409,42 @@ impl CPU
                 }
             }
 
-            Instruction::ADDHL(target) =>
+            Instruction::ADD16(target) =>
             {
-                if let Some(value) = self.get_arithmetic_target_value16(target)
+                if let Some(address) = self.get_arithmetic_target_value16(target)
                 {
-                    let result = self.addhl(value);
-                    self.registers.set_hl(result);
+                    let value = self.bus.read_byte(address);
+                    let result = self.add(value);
+                    self.registers.a = result;
                 }
                 else
                 {
                     // TODO: support more targets
                 }
+            }
+
+            Instruction::ADDD8() =>
+            {
+                let value = self.read_next_byte();
+                let result = self.add(value);
+                self.registers.a = result;
+            }
+
+            Instruction::ADDHL(target) =>
+            {
+                let value = match target
+                {
+                    ADDHLTarget::BC => self.registers.get_bc(),
+                    ADDHLTarget::DE => self.registers.get_de(),
+                    ADDHLTarget::HL => self.registers.get_hl(),
+                    ADDHLTarget::SP => self.sp,
+                    _ =>
+                    {
+                        panic!("TODO: support more targets")
+                    }
+                };
+                let result: u16 = self.registers.get_hl().wrapping_add(value);
+                self.registers.set_hl(result);
             }
 
             Instruction::SUB(target) =>
@@ -483,6 +545,25 @@ impl CPU
                 }
             }
 
+            Instruction::CP16(target) =>
+            {
+                if let Some(address) = self.get_arithmetic_target_value16(target)
+                {
+                    let value = self.bus.read_byte(address);
+                    self.sub(value);
+                }
+                else
+                {
+                    // TODO: support more targets
+                }
+            }
+
+            Instruction::CPD8() =>
+            {
+                let value = self.read_next_byte();
+                self.sub(value);
+            }
+
             Instruction::INC(target) =>
             {
                 if let Some(value) = self.get_arithmetic_target_mut(target)
@@ -508,31 +589,31 @@ impl CPU
 
                 match target
                 {
-                    Inc16Target::BC =>
+                    IncDec16Target::BC =>
                     {
                         initial = self.registers.get_bc();
                         result = initial + 1;
                         self.registers.set_bc(result);
                     }
-                    Inc16Target::DE =>
+                    IncDec16Target::DE =>
                     {
                         initial = self.registers.get_de();
                         result = initial + 1;
                         self.registers.set_de(result);
                     }
-                    Inc16Target::HL =>
+                    IncDec16Target::HL =>
                     {
                         initial = self.registers.get_hl();
                         result = initial + 1;
                         self.registers.set_hl(result);
                     }
-                    Inc16Target::HLI =>
+                    IncDec16Target::HLI =>
                     {
                         initial = self.bus.read_byte(self.registers.get_hl()) as u16;
                         result = initial + 1;
                         self.bus.write_byte(self.registers.get_hl(), result as u8);
                     }
-                    Inc16Target::SP =>
+                    IncDec16Target::SP =>
                     {
                         initial = self.bus.read_byte(self.sp) as u16;
                         result = initial + 1;
@@ -550,7 +631,7 @@ impl CPU
                 if let Some(value) = self.get_arithmetic_target_mut(target)
                 {
                     let initial = *value;
-                    let result = initial - 1;
+                    let result = initial.wrapping_sub(1);
                     *value = result;
 
                     self.registers.f.zero = result == 0;
@@ -561,6 +642,50 @@ impl CPU
                 {
                     // TODO: support more targets
                 }
+            }
+
+            Instruction::DEC16(target) =>
+            {
+                let mut result = 0;
+                let mut initial = 0;
+
+                match target
+                {
+                    IncDec16Target::BC =>
+                    {
+                        initial = self.registers.get_bc();
+                        result = initial.wrapping_sub(1);
+                        self.registers.set_bc(result);
+                    }
+                    IncDec16Target::DE =>
+                    {
+                        initial = self.registers.get_de();
+                        result = initial.wrapping_sub(1);
+                        self.registers.set_de(result);
+                    }
+                    IncDec16Target::HL =>
+                    {
+                        initial = self.registers.get_hl();
+                        result = initial.wrapping_sub(1);
+                        self.registers.set_hl(result);
+                    }
+                    IncDec16Target::HLI =>
+                    {
+                        initial = self.bus.read_byte(self.registers.get_hl()) as u16;
+                        result = initial.wrapping_sub(1);
+                        self.bus.write_byte(self.registers.get_hl(), result as u8);
+                    }
+                    IncDec16Target::SP =>
+                    {
+                        initial = self.bus.read_byte(self.sp) as u16;
+                        result = initial.wrapping_sub(1);
+                        self.bus.write_byte(self.sp, result as u8);
+                    }
+                }
+
+                self.registers.f.zero = result == 0;
+                self.registers.f.subtract = true;
+                self.registers.f.half_carry = initial & 0xF == 0;
             }
 
             Instruction::CCF() =>
